@@ -53,15 +53,40 @@ rotate_data <- function(data){
   data
 }
 
-main <- function(){
-  sim_data <- load_data()
-  original_edgelist <- get_edgelist(sim_data)
-  # rotated_data <- rotate_data(sim_data)
-  load("rotated_data.Rdata")
-  rotated_edgelist <- get_edgelist(rotated_data)
-  save(original_edgelist, file="original_edgelist.Rdata")
-  save(rotated_edgelist, file="rotated_edgelist.Rdata")
+get_stats <- function(edgelist){
+  associations <- edgelist %>%
+    dplyr::count(ID1) %>%
+    dplyr::rename("associations" = "n")
+  
+  degree <- edgelist %>%
+    dplyr::group_by(ID1) %>%
+    dplyr::summarise(degree = n_distinct(ID2))
+  
+  largest_timegroup <- max(edgelist$timegroup)
+  
+  sri_per_edge <- edgelist %>%
+    dplyr::group_by(ID1, ID2) %>%
+    dplyr::summarise(sri = n()/largest_timegroup)
+  
+  average_sri <- sri_per_edge %>%
+    dplyr::group_by(ID1) %>%
+    dplyr::summarise(average_sri = mean(sri))
+  
+  stats <- dplyr::inner_join(associations, degree, by = dplyr::join_by(ID1)) %>% dplyr::inner_join(., average_sri, by=dplyr::join_by(ID1))
+  stats
 }
 
-main()
+main <- function(){
+  # sim_data <- load_data()
+  # original_edgelist <- get_edgelist(sim_data)
+  # rotated_data <- rotate_data(sim_data)
+  # rotated_edgelist <- get_edgelist(rotated_data)
+  # save(original_edgelist, file="original_edgelist.Rdata")
+  # save(rotated_edgelist, file="rotated_edgelist.Rdata")
+  
+  load("original_edgelist.Rdata")
+  get_stats(original_edgelist)
+}
+
+stats <- main()
 
