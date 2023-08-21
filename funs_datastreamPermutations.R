@@ -35,52 +35,57 @@ p_shift <- function(dataset, shiftMax = 10, idCol = "Nili_id", dateCol = "dateOn
 
 p_conveyor <- function(dataset, shiftMax, mode = "global", idCol = "Nili_id", dateCol = "dateOnly", timeCol = "timeOnly"){
   checkmate::assertChoice(mode, choices = c("global", "self"))
+  checkmate::assertChoice(idCol, choices = names(dataset))
+  checkmate::assertChoice(dateCol, choices = names(dataset))
   globalMaxDate <- max(dataset[[dateCol]], na.rm = T)
   globalMinDate <- min(dataset[[dateCol]], na.rm = T)
   globalDateRange <- as.numeric((globalMaxDate - globalMinDate)+1)
   checkmate::assertNumeric(shiftMax, len = 1, upper = globalDateRange) # can't shift by more days than the date range represented in the dataset.
-  out <- dataset %>%
+  indivList <- dataset %>%
     group_by(.data[[idCol]]) %>%
-    group_split(.keep = T) %>%
-    map_dfr(~{
-      shift <- sample(-(shiftMax):shiftMax, size = 1)
-      # get all unique days that show up
-      days <- sort(unique(.x[[dateCol]]))
-      shiftedDates <- days + shift
-      #browser()
-      if(mode == "self"){ # self mode
-        selfMinDate <- min(days, na.rm = T)
-        selfMaxDate <- max(days, na.rm = T)
-        daysFilled <- seq(lubridate::ymd(selfMinDate), lubridate::ymd(selfMaxDate), by = "day")
-        above <- shiftedDates - selfMaxDate
-        below <- selfMinDate - shiftedDates
-      }else{ # global mode
-        daysFilled <- seq(lubridate::ymd(globalMinDate), lubridate::ymd(globalMaxDate), by = "day")
-        above <- shiftedDates - globalMaxDate
-        below <- globalMinDate - shiftedDates
-      }
-      
-      # Enact the conveyor belt
-      if(any(above > 0)){
-        shiftedDates[which(above > 0)] <- daysFilled[as.numeric(above[which(above > 0)])]
-      }
-      if(any(below > 0)){
-        shiftedDates[which(below > 0)] <- rev(daysFilled)[as.numeric(below[which(below > 0)])]
-      }
-      
-      # Make a data frame to hold the data
-      daysDF <- bind_cols({{dateCol}} := days, "newDate" = shiftedDates)
-      new <- .x %>%
-        left_join(daysDF, by = dateCol) %>%
-        rename("oldDate" = all_of(dateCol), {{dateCol}} := "newDate") %>%
-        mutate(shift = shift)
-      
-      if(!is.null(timeCol)){
-        new$timestamp <- lubridate::ymd_hms(paste(new$newDate, new[[timeCol]]))
-      }
-      
-      return(new)
-    })
+    group_split(.keep = T)
+  joined <- vector(mode = "list", length = length(indivList))
+  for(indiv in 1:length(indivList)){
+    x <- indivList[[indiv]]
+    shift <- sample(-(shiftMax):shiftMax, size = 1)
+    #cat(shift, "\n")
+    # get all unique days that show up
+    days <- sort(unique(x[[dateCol]]))
+    if(mode == "self"){ # self mode
+      # get min and max dates to shift around (the "poles" of the conveyor)
+      selfMinDate <- min(days, na.rm = T)
+      selfMaxDate <- max(days, na.rm = T)
+      # create a total sequence of dates to select from
+      daysFilled <- seq(lubridate::ymd(selfMinDate), lubridate::ymd(selfMaxDate), by = "day")
+      # converting to numbers so we can use %%--which dates are the ones we started with?
+      vec <- which(daysFilled %in% days)
+      shiftedvec <- vec + shift # shift
+      new <- (shiftedvec - min(vec)) %% (max(vec)-min(vec)+1)+1 # new dates as numbers
+      shiftedDates <- daysFilled[new] # select those dates from the possibilities
+    }else{ # global mode
+      # create a total sequence of dates to select from
+      daysFilled <- seq(lubridate::ymd(globalMinDate), lubridate::ymd(globalMaxDate), by = "day")
+      # converting to numbers so we can use %%--which dates are the ones we started with?
+      vec <- which(daysFilled %in% days)
+      shiftedvec <- vec + shift #shift
+      new <- (shiftedvec - min(vec)) %% (max(vec)-min(vec)+1)+1 # new dates as numbers
+      shiftedDates <- daysFilled[new] # select those dates from the possibilities
+    }
+    
+    # Make a data frame to hold the old and new dates
+    daysDF <- bind_cols({{dateCol}} := days, 
+                        "newDate" = shiftedDates,
+                        shift = shift)
+    nw <- left_join(x, daysDF, by = dateCol)
+    nw$oldDate <- nw[[dateCol]]
+    nw[[dateCol]] <- nw$newDate
+    
+    if(!is.null(timeCol)){
+      nw$timestamp <- lubridate::ymd_hms(paste(nw$newDate, nw[[timeCol]]))
+    }
+    joined[[indiv]] <- nw
+  }
+  out <- do.call(rbind, lapply(joined, st_sf)) # to avoid losing the sf class
   return(out)
 }
 
