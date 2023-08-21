@@ -37,7 +37,7 @@ rotate_data <- function(data){
   # shifting forward n same as shifting forward and back n/2 ?
   
   ## SET SEED
-  set.seed(2023)
+  # set.seed(2023)
   
   sampled_shift <- data %>%
     dplyr::group_by(indiv) %>%
@@ -51,6 +51,11 @@ rotate_data <- function(data){
     dplyr::mutate(datetime = as.POSIXct(loop_days(datetime, mindate, maxdate, sampledShift)), .by = indiv) %>%
     dplyr::select(indiv, x, y, datetime)
   data
+}
+
+mean_stats <- function(stats){
+  stats %>%
+    dplyr::summarise(mean_associations = mean(associations), mean_degree = mean(degree), mean_sri = mean(average_sri))
 }
 
 get_stats <- function(edgelist){
@@ -77,16 +82,17 @@ get_stats <- function(edgelist){
 }
 
 main <- function(){
-  # sim_data <- load_data()
-  # original_edgelist <- get_edgelist(sim_data)
-  # rotated_data <- rotate_data(sim_data)
-  # rotated_edgelist <- get_edgelist(rotated_data)
-  # save(original_edgelist, file="original_edgelist.Rdata")
-  # save(rotated_edgelist, file="rotated_edgelist.Rdata")
-  
-  load("original_edgelist.Rdata")
-  get_stats(original_edgelist)
+  sim_data <- load_data()
+  realization_data <- data.frame()
+  for (x in 1:100){
+    sprintf("Working on %d realization", x)
+    rotated_data <- rotate_data(sim_data)
+    rotated_edgelist <- get_edgelist(rotated_data)
+    stats <- get_stats(rotated_edgelist)
+    average_stats <- mean_stats(stats)
+    realization_data <- rbind(realization_data, average_stats)
+  }
+  save(realization_data, file="realization_data.Rdata")
 }
-
-stats <- main()
+main()
 
