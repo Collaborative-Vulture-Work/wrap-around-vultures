@@ -66,19 +66,20 @@ get_stats <- function(edgelist){
   
   sri_per_edge <- edgelist %>%
     dplyr::group_by(ID1, ID2) %>%
-    dplyr::summarise(sri = n()/largest_timegroup)
+    dplyr::summarise(sri = n()/largest_timegroup) # this works now, but will need to update it to literally count the number of time groups when both A and B are tracked, for the case when not everyone is tracked in every time group. Denominator should be [total number of timegroups where both individuals exist in the dataset (were tracked), regardless of whether they interact at that timegroup or not.]
   
   average_sri <- sri_per_edge %>%
     dplyr::group_by(ID1) %>%
-    dplyr::summarise(average_sri = mean(sri))
+    dplyr::summarise(average_sri = mean(sri),
+                     strength = sum(sri, na.rm = T))
   
   stats <- dplyr::inner_join(associations, degree, by = dplyr::join_by(ID1)) %>% dplyr::inner_join(., average_sri, by=dplyr::join_by(ID1))
   stats
 }
 
-main <- function(){
-  # sim_data <- load_data()
-  # original_edgelist <- get_edgelist(sim_data)
+main <- function(){ # everything above this is helper functions
+  sim_data <- load_data()
+  original_edgelist <- get_edgelist(sim_data)
   # rotated_data <- rotate_data(sim_data)
   # rotated_edgelist <- get_edgelist(rotated_data)
   # save(original_edgelist, file="original_edgelist.Rdata")
