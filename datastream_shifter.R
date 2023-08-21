@@ -85,8 +85,8 @@ get_stats <- function(edgelist){
 main <- function(){
   sim_data <- load_data()
   realization_data <- data.frame()
-  for (x in 1:100){
-    sprintf("Working on %d realization", x)
+  for (x in 1:5){
+    cat("Working on", x, "realization\n")
     rotated_data <- rotate_data(sim_data)
     rotated_edgelist <- get_edgelist(rotated_data)
     stats <- get_stats(rotated_edgelist)
@@ -97,3 +97,32 @@ main <- function(){
 }
 main()
 
+# Compare to observed
+load("original_edgelist.Rdata")
+mn <- mean_stats(get_stats(original_edgelist))
+
+# Plot
+degree <- realization_data %>%
+  ggplot(aes(x = mean_degree))+
+  geom_histogram()+
+  theme_classic()+
+  geom_vline(xintercept = mn$mean_degree, linewidth = 1.5, color = "red")+
+  xlab("Mean Degree")+ylab("")
+ggsave(degree, filename = "fig/degreehist.png")
+
+assoc <- realization_data %>%
+  ggplot(aes(x = mean_associations))+
+  geom_histogram()+
+  theme_classic()+
+  geom_vline(xintercept = mn$mean_associations, linewidth = 1.5, color = "red")+
+  xlab("Mean # of Associations")+ylab("")
+ggsave(assoc, filename = "fig/assochist.png")
+
+edgeweight <- realization_data %>% 
+  ggplot(aes(x = mean_sri))+
+  geom_histogram()+
+  theme_classic()+
+  geom_vline(xintercept = mn$mean_sri, linewidth = 1.5, color = "red")+
+  xlab("Mean Edge Weight")+ylab("")
+ggsave(edgeweight, filename = "fig/edgeweight.png")
+# note: this one is a little funky. It's actually the mean *mean* edge weight--took means by individual and then mean across individuals. There's the problem we discussed before with needing to draw the total number of time periods from the data instead of assuming all indivs were present for all time periods, which might be affecting this. But really, we want to do strength, not mean edge weight, here.
