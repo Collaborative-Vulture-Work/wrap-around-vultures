@@ -11,7 +11,7 @@ loop_days <- function(data, min, max, shift){
   shift <- 24 * 60 * 60 * shift
   shifted <- data + shift
   if(shifted > max){ 
-    shifted <- min + shift - as.period(difftime(max, data, units="days")) - difftime(ceiling_date(max, unit="day"), max, units="hours") + hours(1)
+    shifted <- min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours")
   }
   shifted
 }
@@ -19,17 +19,14 @@ loop_days <- function(data, min, max, shift){
 # gets network graph
 get_edgelist <- function(data, idCol, dateCol){
   if(is.data.frame(data))
-    timegroup_data <- data.table::setDT(data)
-  else
-    timegroup_data <- data
-  browser()
-  timegroup_data <- spatsoc::group_times(timegroup_data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
+    data <- data.table::setDT(data)
+  timegroup_data <- spatsoc::group_times(data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
   spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
 # loads data and changes day and step to posix
-load_data <- function(){
-  load('xyFromSimulationForSNanalysis_1000_10_70_7_0_.rdata')
+load_data <- function(filename){
+  load(filename)
   simulation_data <- XYind_log2
   start_time <- as.POSIXct("2023-08-11 23:50")  # note simulation data starts on day 1 step 1 so the mindate will be 8-13 00:00
   simulation_data <- simulation_data %>%
@@ -62,7 +59,8 @@ rotate_data <- function(data, idCol, dateCol, shift=NULL){
 }
 
 rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
-  set.seed(2023)
+  ## SET SEED
+  # set.seed(2023)
   data_table <- data.frame(data)
   data_table <- data.table::setDT(data_table)
   if(is.null(shift)){
@@ -72,10 +70,12 @@ rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
   }
   loop_days <- Vectorize(loop_days)
   data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), mindate, maxdate, sampledShift))]
+  # data_table[, -c("mindate", "maxdate", "sampledShift")]
   data_table
 }
 
 rotate_data_parallel <- function(data, idCol, dateCol, shift=NULL){
+  ## SET SEED
   set.seed(2023)
   if(is.null(shift)){
     sampled_shift <- data %>%
@@ -105,7 +105,7 @@ rotate_data_parallel <- function(data, idCol, dateCol, shift=NULL){
 
 mean_stats <- function(stats){
   stats %>%
-    dplyr::summarise(mean_associations = mean(associations), mean_degree = mean(degree), mean_sri = mean(average_sri))
+    dplyr::summarise(mean_associations = mean(associations), mean_degree = mean(degree), mean_sri = mean(mean_sri), mean_strength =mean(strength))
 }
 
 get_stats <- function(edgelist){
@@ -123,34 +123,33 @@ get_stats <- function(edgelist){
     dplyr::group_by(ID1, ID2) %>%
     dplyr::summarise(sri = n()/largest_timegroup) # this works now, but will need to update it to literally count the number of time groups when both A and B are tracked, for the case when not everyone is tracked in every time group. Denominator should be [total number of timegroups where both individuals exist in the dataset (were tracked), regardless of whether they interact at that timegroup or not.]
   
-  average_sri <- sri_per_edge %>%
+  mean_sri_and_strength <- sri_per_edge %>%
     dplyr::group_by(ID1) %>%
-    dplyr::summarise(average_sri = mean(sri),
+    dplyr::summarise(mean_sri = mean(sri),
                      strength = sum(sri, na.rm = T))
   
-  stats <- dplyr::inner_join(associations, degree, by = dplyr::join_by(ID1)) %>% dplyr::inner_join(., average_sri, by=dplyr::join_by(ID1))
+  stats <- dplyr::inner_join(associations, degree, by = dplyr::join_by(ID1)) %>%
+    dplyr::inner_join(., mean_sri_and_strength, by=dplyr::join_by(ID1))
   stats
 }
 
 main <- function(){
-  sim_data <- load_data()
+  sim_data <- load_data("./simdata/6i_10d_socialable.rdata")
   # sim_data <- sim_data %>%
   #   dplyr::filter(indiv == 1)
   realization_data <- data.frame()
-  for (x in 1:1){
+  time_to_rotate <- Sys.time()
+  for (x in 1:100){
     print(paste("Working on realization", x))
-    time_to_rotate <- Sys.time()
-    
-    # rotated_data <- rotate_data(sim_data, idCol = indiv, dateCol = datetime)
+
     rotated_data <- rotate_data_table(sim_data, idCol = "indiv", dateCol = "datetime")
-    # rotated_data <- rotate_data_parallel(sim_data, idCol = indiv, dateCol = datetime)
-    browser()
-    print(Sys.time() - time_to_rotate)
+    
     rotated_edgelist <- get_edgelist(rotated_data, idCol = "indiv", dateCol = "datetime")
     stats <- get_stats(rotated_edgelist)
     average_stats <- mean_stats(stats)
     realization_data <- rbind(realization_data, average_stats)
   }
+  print(Sys.time() - time_to_rotate)
   save(realization_data, file="realization_data.Rdata")
 }
 main()
