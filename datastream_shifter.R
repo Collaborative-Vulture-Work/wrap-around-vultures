@@ -10,9 +10,9 @@ loop_days <- function(data, min, max, shift){
   # shift <- lubridate::days(shift)
   shift <- 24 * 60 * 60 * shift
   shifted <- data + shift
-  if(shifted > max){ 
-    shifted <- min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours")
-  }
+  shifted <- ifelse(shifted > max, min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours"), shifted)
+  # if(shifted > max)
+  #   shifted <- min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours")
   shifted
 }
 
@@ -68,9 +68,12 @@ rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
   } else {
     data_table[, sampledshift := sample(1:shift), by = get(idCol)]
   }
-  loop_days <- Vectorize(loop_days)
+  
+  
+  # loop_days <- Vectorize(loop_days)
+  # data_table[, eval(dateCol) := as.POSIXct(mapply(function(w, x, y, z) loop_days(w, x, y, z), get(dateCol), mindate, maxdate, sampledShift))]
   data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), mindate, maxdate, sampledShift))]
-  # data_table[, -c("mindate", "maxdate", "sampledShift")]
+  data_table[, -c("mindate", "maxdate", "sampledShift")]
   data_table
 }
 
@@ -106,6 +109,7 @@ rotate_data_parallel <- function(data, idCol, dateCol, shift=NULL){
 mean_stats <- function(stats){
   stats %>%
     dplyr::summarise(mean_associations = mean(associations), mean_degree = mean(degree), mean_sri = mean(mean_sri), mean_strength =mean(strength))
+  stats
 }
 
 get_stats <- function(edgelist){
@@ -143,7 +147,6 @@ main <- function(){
     print(paste("Working on realization", x))
 
     rotated_data <- rotate_data_table(sim_data, idCol = "indiv", dateCol = "datetime")
-    
     rotated_edgelist <- get_edgelist(rotated_data, idCol = "indiv", dateCol = "datetime")
     stats <- get_stats(rotated_edgelist)
     average_stats <- mean_stats(stats)
