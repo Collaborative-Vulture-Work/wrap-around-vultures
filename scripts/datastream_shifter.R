@@ -35,29 +35,6 @@ load_data <- function(filename){
   simulation_data
 }
 
-rotate_data <- function(data, idCol, dateCol, shift=NULL){
-  # shifting forward n same as shifting forward and back n/2 ?
-  ## SET SEED
-  set.seed(2023)
-  if(is.null(shift)){
-    sampled_shift <- data %>%
-      dplyr::group_by({{idCol}}) %>%
-      dplyr::summarise(mindate = min({{dateCol}}), maxdate = max({{dateCol}}), sampledShift = (sample(1:floor(difftime(max({{dateCol}}), min({{dateCol}}), units="days") - 1), 1)))
-    data <- dplyr::inner_join(data, sampled_shift, by = dplyr::join_by({{idCol}}))
-  } else {
-    data <- data %>%
-      dplyr::group_by({{idCol}}) %>%
-      dplyr::summarise(sampledShift = sample(1:shift))
-  }
-  
-  loop_days <- Vectorize(loop_days)
-  
-  data <- data %>%
-    dplyr::mutate("{{dateCol}}" := as.POSIXct(loop_days({{dateCol}}, mindate, maxdate, sampledShift))) %>%
-    dplyr::select(-c(mindate, maxdate, sampledShift))
-  data
-}
-
 rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
   ## SET SEED
   # set.seed(2023)
@@ -77,39 +54,9 @@ rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
   data_table
 }
 
-rotate_data_parallel <- function(data, idCol, dateCol, shift=NULL){
-  ## SET SEED
-  set.seed(2023)
-  if(is.null(shift)){
-    sampled_shift <- data %>%
-      dplyr::group_by({{idCol}}) %>%
-      dplyr::summarise(mindate = min({{dateCol}}), maxdate = max({{dateCol}}), sampledShift = (sample(1:floor(difftime(max({{dateCol}}), min({{dateCol}}), units="days") - 1), 1)))
-    data <- dplyr::inner_join(data, sampled_shift, by = dplyr::join_by({{idCol}}))
-  } else {
-    data <- data %>%
-      dplyr::group_by({{idCol}}) %>%
-      dplyr::summarise(sampledShift = lubridate::days(sample(1:shift)))
-  }
-  
-  loop_days <- Vectorize(loop_days)
-  
-  cluster <- new_cluster(parallel::detectCores() - 2)
-  
-  data <- data %>% 
-    dplyr::group_by({{idCol}}) %>%
-    multidplyr::partition(cluster)
-  
-  data <- data %>%
-    dplyr::mutate(dateCol = as.POSIXct(loop_days({{dateCol}}, mindate, maxdate, sampledShift))) %>%
-    dplyr::select(-c(mindate, maxdate, sampledShift)) %>%
-    dplyr::collect()
-  data
-}
-
 mean_stats <- function(stats){
   stats %>%
     dplyr::summarise(mean_associations = mean(associations), mean_degree = mean(degree), mean_sri = mean(mean_sri), mean_strength =mean(strength))
-  stats
 }
 
 get_stats <- function(edgelist){
