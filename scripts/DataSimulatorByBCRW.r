@@ -5,12 +5,6 @@
 # Edited by Ryan Nguyen and Kaija Gahm
 # XXXK are notations by Kaija to indicate confusion/questions.
 
-#Required packages #######
-library(CircStats)
-library(spatstat)
-library(sp)
-library(R.matlab)
-
 #### model parameters and protocol selection for users to choose #######
 ToPlot=1#can be 0 (no plot) or 1 (create plots)- note this will slow the proccess a lot!!
 Color_indv=c(3,5,6,7,8,2,3,5,6,7,8,2)#if ToPlot=01 this determines how many individfuals to plot (currently 12). The colors for plotted individuas: 2-=red 3=green 5= light green 6 purpule 7 yelow 8 grey 
@@ -43,12 +37,14 @@ simulateAgents <- function(N_indv = 6,
                            PropDriftIndiv = 1,
                            PairedAgents = 0,
                            PairStartDist = 200,
+                           Scl = 2000,
                            seed = NULL,
                            EtaCRW = 0.7,
                            StpSize_ind = 7,
                            StpStd_ind = 5,
                            Kappa_ind = 3,
-                           ToPlot = 1){
+                           ToPlot = 1,
+                           quiet = F){
   
   # Set the seed, if one is provided ----------------------------------------
   if(!is.null(seed)){
@@ -98,7 +94,7 @@ simulateAgents <- function(N_indv = 6,
   Phi_ind <- rep(0, N_indv) # Direction of the last step for the individuals
   XYind <- vector(mode = "list") # This list will store the matrices of locations of all individuals
   HRCnt <- matrix(data = NA, nrow = N_indv, ncol = 3) # Home range centers
-  HRCnt[,3] <- rep(c(1,2), N_indv/2) # Since sex is listed in this parameter I update it to be pairs of diferent sexes for the paired design
+  HRCnt[,3] <- rep(c(1,2), length.out = nrow(HRCnt)) #since sex is listed in this parameter i update it to be pairs of diferent sexes for the paired design # XXXK Updated this to allow for odd numbers of individuals 
   HRcenterDist <- rep(0, N_indv/2) # Distance between pairs of agents at the beginning
   
   #### Setting drift of HR center (bias point) for the drifting scenarios ####
@@ -141,8 +137,8 @@ simulateAgents <- function(N_indv = 6,
   #### generating landscape for this iteration #######      
   # N_FoodPatches <- 50 # How many patches - this is just to be consistent with the code. currently individuals do not respond to resources. 
   # Scl <- 2000 # The size of the area for simuation. not important since there is not boundry. just to be consistent with other codes.
-  # PointsStrc <- rsyst(nx <- sqrt(N_FoodPatches)) # Generation of a uniform landscape
-  # FoodItems <- SpatialPoints(coords(PointsStrc)*Scl-Scl/2) # These are the points on scale of 0 to 1 no -Scl/2 to Scl/2
+  # PointsStrc <- spatstat.geom::rsyst(nx <- sqrt(N_FoodPatches)) # Generation of a uniform landscape
+  # FoodItems <- sp::SpatialPoints(coords(PointsStrc)*Scl-Scl/2) # These are the points on scale of 0 to 1 no -Scl/2 to Scl/2
   # if(ToPlot==1){
   #   plot(FoodItems, col='white', pch=1) 
   #   title('the simulated landscape')
@@ -164,10 +160,10 @@ simulateAgents <- function(N_indv = 6,
       print(paste("pair:",k-1,"and",k, "distance",HRcenterDist[k/2] ))
     } # If paired design, then use nearby coordinate for every second individual
     if (ToPlot == 1){
-      plot(SpatialPoints(coords = matrix(data = XYind[[k]][1, ], nrow = 1)), add = T,
+      plot(sp::SpatialPoints(coords = matrix(data = XYind[[k]][1, ], nrow = 1)), add = T,
            pch = HRCnt[k, c(3)]+23, col = HRCnt[k, c(3)], bg = HRCnt[k, c(3)], cex=1.5) 
       if((PairedAgents == 1) & (k %% 2 == 0)){ # Plot also line between pairs
-        plot(SpatialLines(list(Lines(list(Line(rbind(XYind[[k-1]][1, ],
+        plot(sp::SpatialLines(list(sp::Lines(list(sp::Line(rbind(XYind[[k-1]][1, ],
                                                      c(XYind[[k]][1, ])))), 
                                      ID=k/2) )), add=T) # This is the river 'line' 
       } # Plot also line between pairs
@@ -183,7 +179,7 @@ simulateAgents <- function(N_indv = 6,
       #### distance of this Curr_indv to all other individuals 
       Dist <- rep(NA,N_indv ) 
       for(ii in 1:N_indv){
-        Dist[ii] <- dist(rbind(XYind[[ii]][Curr_tmStp, ],
+        Dist[ii] <- stats::dist(rbind(XYind[[ii]][Curr_tmStp, ],
                                c(XYind[[Curr_indv]][Curr_tmStp, ])))
       }
       Dist[Dist==0] <- NA # Getting rid of the distance to self
@@ -206,7 +202,7 @@ simulateAgents <- function(N_indv = 6,
         BiasPoint <- XYind[[which.min(Dist)]][Curr_tmStp, ]
       } # Then updated  this for the bias also
       
-      coo <- BiasPoint  - XYind[[Curr_indv]][Curr_tmStp, ] # Checking direction to the Bias point of this individual, change the second ccomp to have another bias
+      coo <- BiasPoint - XYind[[Curr_indv]][Curr_tmStp, ] # Checking direction to the Bias point of this individual, change the second ccomp to have another bias
       # Set direction:
       mu <- Arg(coo[1] + (0+1i) * coo[2]) # XXXK what is this? Direction, I think.
       # Make sure direction is not negative:
@@ -214,11 +210,11 @@ simulateAgents <- function(N_indv = 6,
         mu <- mu + 2 * pi  
       } 
       mu.av <- Arg(EtaCRW * exp(Phi_ind[Curr_indv] * (0+1i)) + (1 - EtaCRW) * exp(mu * (0+1i))) # Bias to initial location + CRW to find the von mises center for next step
-      Phi_ind[Curr_indv] <- rvm(n=1, mean = mu.av, k = Kappa_ind)#choosing curr step direction from vonMises centered around the direction selected above 
+      Phi_ind[Curr_indv] <- CircStats::rvm(n=1, mean = mu.av, k = Kappa_ind)#choosing curr step direction from vonMises centered around the direction selected above 
       
       ##### Performing the step #########
       # Selection of step size for this indiv in this state from the specific gamma          
-      step.len <- rgamma(1, shape = StpSize_ind^2/StpStd_ind^2, 
+      step.len <- stats::rgamma(1, shape = StpSize_ind^2/StpStd_ind^2, 
                          scale = StpStd_ind^2/StpSize_ind)
       step <- step.len * c(Re(exp((0+1i) * Phi_ind[Curr_indv])), 
                            Im(exp((0+1i) * Phi_ind[Curr_indv])))
@@ -227,14 +223,15 @@ simulateAgents <- function(N_indv = 6,
       ###### ploting the steps ########
       if(Curr_indv <= length(Color_indv) & ToPlot==1 ){
         # Plot only up to 6 indiv and only if ToPlot==1
-        StepAsLine = SpatialLines(list(Lines(list(Line(XYind[[Curr_indv]][Curr_tmStp:(Curr_tmStp+1) , ])), 
+        StepAsLine <- sp::SpatialLines(list(sp::Lines(list(sp::Line(XYind[[Curr_indv]][Curr_tmStp:(Curr_tmStp+1) , ])), 
                                              ID = Curr_tmStp) )) # Convert line to spatial object for plot
         plot(StepAsLine, add = T, col = Color_indv[Curr_indv], lwd = 4) # Plot the buffer
       } # Plot only up to 6 indiv
       
     } # End loop on invdividuals
-    print(c("done with timestep", Curr_tmStp, "out of", N_tmStp))
-    
+    if(quiet == F){
+      print(c("done with timestep", Curr_tmStp, "out of", N_tmStp))
+    }
   } # End loop on time steps
   
   #### after the nested loops -how many times out of the box? ####
@@ -252,15 +249,15 @@ simulateAgents <- function(N_indv = 6,
   
   # Create a list for output with three slots: hr centers, and xy coordinates
   Name1 <- paste("xyFromSimulationForSNanalysis", N_tmStp, N_indv, 100*EtaCRW, StpSize_ind, DriftHRCenters, ".rdata", sep = "_")
+  Name2 <- "xyFromSimulationForSNanalysis.mat"
   out <- list("Name1" = Name1, "Name2" = Name2, "HRCntXY" = HRCnt, "XY" = XYind_log2)
   return(out)
 }
 
-simulateAgents()
-save(list("HRCntXY" = HRCnt, "XY" = XYind_log2), file = Name1)
-Name2 <- "xyFromSimulationForSNanalysis.mat"
-save(list=ls(),file=Name1)
-writeMat(con = Name2, XY = XYind_log2, HRCntXY = HRCnt) 
+#test <- simulateAgents(N_indv = 5, DaysToSimulate = 10)
+# save(list("HRCntXY" = HRCnt, "XY" = XYind_log2), file = Name1)
+# save(list=ls(),file=Name1)
+# R.matlab::writeMat(con = Name2, XY = XYind_log2, HRCntXY = HRCnt) 
 
 
 
