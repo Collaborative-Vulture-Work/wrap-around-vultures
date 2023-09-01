@@ -2,11 +2,13 @@ library(dplyr)
 library(lubridate)
 library(data.table)
 library(spatsoc)
-
+library(multidplyr)
 SAMPLING_INTERVAL <- 10 # "minutes", from matlab code; 10 minutes per timestep with 50 timesteps gives about 8hrs of data
 
 # loops a single posix around min and max
 loop_days <- function(data, min, max, shift){
+  # shift <- lubridate::days(shift)
+  shift <- 24 * 60 * 60 * shift
   shifted <- data + shift
   if(shifted > max){ 
     shifted <- min + shift - as.period(difftime(max, data, units="days")) - difftime(ceiling_date(max, unit="day"), max, units="hours") + hours(1)
@@ -15,16 +17,19 @@ loop_days <- function(data, min, max, shift){
 }
 
 # gets network graph
-get_edgelist <- function(data){
-  timegroup_data <- data.frame(data)
-  data.table::setDT(timegroup_data)
-  timegroup_data <- spatsoc::group_times(timegroup_data, datetime = "datetime", threshold = "10 minutes")
-  spatsoc::edge_dist(timegroup_data, threshold = 14, id = "indiv", coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
+get_edgelist <- function(data, idCol, dateCol){
+  if(is.data.frame(data))
+    timegroup_data <- data.table::setDT(data)
+  else
+    timegroup_data <- data
+  browser()
+  timegroup_data <- spatsoc::group_times(timegroup_data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
+  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
 # loads data and changes day and step to posix
 load_data <- function(){
-  load('xyFromSimulationForSNanalysis_5000_60_70_7_0_.RData')
+  load('xyFromSimulationForSNanalysis_1000_10_70_7_0_.rdata')
   simulation_data <- XYind_log2
   start_time <- as.POSIXct("2023-08-11 23:50")  # note simulation data starts on day 1 step 1 so the mindate will be 8-13 00:00
   simulation_data <- simulation_data %>%
@@ -33,23 +38,68 @@ load_data <- function(){
   simulation_data
 }
 
-rotate_data <- function(data){
+rotate_data <- function(data, idCol, dateCol, shift=NULL){
   # shifting forward n same as shifting forward and back n/2 ?
-  
   ## SET SEED
-  # set.seed(2023)
-  
-  sampled_shift <- data %>%
-    dplyr::group_by(indiv) %>%
-    dplyr::summarise(mindate = min(datetime), maxdate = max(datetime), sampledShift = lubridate::days(sample(1:floor(difftime(max(datetime), min(datetime), units="days") - 1), 1)))
-  
-  data <- dplyr::inner_join(data, sampled_shift, by = dplyr::join_by(indiv))
+  set.seed(2023)
+  if(is.null(shift)){
+    sampled_shift <- data %>%
+      dplyr::group_by({{idCol}}) %>%
+      dplyr::summarise(mindate = min({{dateCol}}), maxdate = max({{dateCol}}), sampledShift = (sample(1:floor(difftime(max({{dateCol}}), min({{dateCol}}), units="days") - 1), 1)))
+    data <- dplyr::inner_join(data, sampled_shift, by = dplyr::join_by({{idCol}}))
+  } else {
+    data <- data %>%
+      dplyr::group_by({{idCol}}) %>%
+      dplyr::summarise(sampledShift = sample(1:shift))
+  }
   
   loop_days <- Vectorize(loop_days)
   
   data <- data %>%
-    dplyr::mutate(datetime = as.POSIXct(loop_days(datetime, mindate, maxdate, sampledShift)), .by = indiv) %>%
-    dplyr::select(indiv, x, y, datetime)
+    dplyr::mutate("{{dateCol}}" := as.POSIXct(loop_days({{dateCol}}, mindate, maxdate, sampledShift))) %>%
+    dplyr::select(-c(mindate, maxdate, sampledShift))
+  data
+}
+
+rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
+  set.seed(2023)
+  data_table <- data.frame(data)
+  data_table <- data.table::setDT(data_table)
+  if(is.null(shift)){
+    data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),max(get(dateCol)), sample(1:floor(difftime(max(get(dateCol)), min(get(dateCol)), units="days") - 1), 1)), by = get(idCol)]
+  } else {
+    data_table[, sampledshift := sample(1:shift), by = get(idCol)]
+  }
+  loop_days <- Vectorize(loop_days)
+  data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), mindate, maxdate, sampledShift))]
+  data_table
+}
+
+rotate_data_parallel <- function(data, idCol, dateCol, shift=NULL){
+  set.seed(2023)
+  if(is.null(shift)){
+    sampled_shift <- data %>%
+      dplyr::group_by({{idCol}}) %>%
+      dplyr::summarise(mindate = min({{dateCol}}), maxdate = max({{dateCol}}), sampledShift = (sample(1:floor(difftime(max({{dateCol}}), min({{dateCol}}), units="days") - 1), 1)))
+    data <- dplyr::inner_join(data, sampled_shift, by = dplyr::join_by({{idCol}}))
+  } else {
+    data <- data %>%
+      dplyr::group_by({{idCol}}) %>%
+      dplyr::summarise(sampledShift = lubridate::days(sample(1:shift)))
+  }
+  
+  loop_days <- Vectorize(loop_days)
+  
+  cluster <- new_cluster(parallel::detectCores() - 2)
+  
+  data <- data %>% 
+    dplyr::group_by({{idCol}}) %>%
+    multidplyr::partition(cluster)
+  
+  data <- data %>%
+    dplyr::mutate(dateCol = as.POSIXct(loop_days({{dateCol}}, mindate, maxdate, sampledShift))) %>%
+    dplyr::select(-c(mindate, maxdate, sampledShift)) %>%
+    dplyr::collect()
   data
 }
 
@@ -84,11 +134,19 @@ get_stats <- function(edgelist){
 
 main <- function(){
   sim_data <- load_data()
+  # sim_data <- sim_data %>%
+  #   dplyr::filter(indiv == 1)
   realization_data <- data.frame()
-  for (x in 1:100){
-    sprintf("Working on %d realization", x)
-    rotated_data <- rotate_data(sim_data)
-    rotated_edgelist <- get_edgelist(rotated_data)
+  for (x in 1:1){
+    print(paste("Working on realization", x))
+    time_to_rotate <- Sys.time()
+    
+    # rotated_data <- rotate_data(sim_data, idCol = indiv, dateCol = datetime)
+    rotated_data <- rotate_data_table(sim_data, idCol = "indiv", dateCol = "datetime")
+    # rotated_data <- rotate_data_parallel(sim_data, idCol = indiv, dateCol = datetime)
+    browser()
+    print(Sys.time() - time_to_rotate)
+    rotated_edgelist <- get_edgelist(rotated_data, idCol = "indiv", dateCol = "datetime")
     stats <- get_stats(rotated_edgelist)
     average_stats <- mean_stats(stats)
     realization_data <- rbind(realization_data, average_stats)
@@ -96,4 +154,3 @@ main <- function(){
   save(realization_data, file="realization_data.Rdata")
 }
 main()
-

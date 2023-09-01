@@ -13,9 +13,9 @@ ToPlot=1#can be 0 (no plot) or 1 (create plots)- note this will slow the procces
 Color_indv=c(3,5,6,7,8,2,3,5,6,7,8,2)#if ToPlot=01 this determines how many individfuals to plot (currently 12). The colors for plotted individuas: 2-=red 3=green 5= light green 6 purpule 7 yelow 8 grey
 
 DayLength=50;#how many time step for each day (currently it is limited to 59 since i considered it as minutes within an hour)
-DaysToSimulate=100 ;#how many days to simulate
-N_indv=60#number of individuals in the population 
-Social_Pecrt_rng=0#detection range (in meters) - indivduals within this range will be considered in the bias point in the relevan scenario of sociable agents. set to 0 if you want socially indiferent agents (or in the fixed pairs scenario) 
+DaysToSimulate=10 ;#how many days to simulate
+N_indv=6#number of individuals in the population 
+Social_Pecrt_rng=2000#detection range (in meters) - indivduals within this range will be considered in the bias point in the relevan scenario of sociable agents. set to 0 if you want socially indiferent agents (or in the fixed pairs scenario) 
 
 DriftHRCenters=0#1 or 0 for a drift of the center in space along the simulation (i.e. the changing environment scenarios), 0 is no drift.
 DriftStrength=c(1,0)#if DriftHRCenters==1 this defines drift in m per day for X and Y values in the simulation  
