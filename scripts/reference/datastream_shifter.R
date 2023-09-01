@@ -3,7 +3,6 @@ library(lubridate)
 library(data.table)
 library(spatsoc)
 library(multidplyr)
-SAMPLING_INTERVAL <- 10 # "minutes", from matlab code; 10 minutes per timestep with 50 timesteps gives about 8hrs of data
 
 # loops a single posix around min and max
 loop_days <- function(data, min, max, shift){

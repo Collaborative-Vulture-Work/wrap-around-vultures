@@ -168,8 +168,8 @@ simulateAgents <- function(N_indv = 6,
            pch = HRCnt[k, c(3)]+23, col = HRCnt[k, c(3)], bg = HRCnt[k, c(3)], cex=1.5) 
       if((PairedAgents == 1) & (k %% 2 == 0)){ # Plot also line between pairs
         plot(sp::SpatialLines(list(sp::Lines(list(sp::Line(rbind(XYind[[k-1]][1, ],
-                                                     c(XYind[[k]][1, ])))), 
-                                     ID=k/2) )), add=T) # This is the river 'line' 
+                                                                 c(XYind[[k]][1, ])))), 
+                                             ID=k/2) )), add=T) # This is the river 'line' 
       } # Plot also line between pairs
     } # Plot the line
   } # End loop on individuals 
@@ -184,7 +184,7 @@ simulateAgents <- function(N_indv = 6,
       Dist <- rep(NA,N_indv ) 
       for(ii in 1:N_indv){
         Dist[ii] <- stats::dist(rbind(XYind[[ii]][Curr_tmStp, ],
-                               c(XYind[[Curr_indv]][Curr_tmStp, ])))
+                                      c(XYind[[Curr_indv]][Curr_tmStp, ])))
       }
       Dist[Dist==0] <- NA # Getting rid of the distance to self
       
@@ -219,7 +219,7 @@ simulateAgents <- function(N_indv = 6,
       ##### Performing the step #########
       # Selection of step size for this indiv in this state from the specific gamma          
       step.len <- stats::rgamma(1, shape = StpSize_ind^2/StpStd_ind^2, 
-                         scale = StpStd_ind^2/StpSize_ind)
+                                scale = StpStd_ind^2/StpSize_ind)
       step <- step.len * c(Re(exp((0+1i) * Phi_ind[Curr_indv])), 
                            Im(exp((0+1i) * Phi_ind[Curr_indv])))
       XYind[[Curr_indv]][Curr_tmStp + 1, ] <- XYind[[Curr_indv]][Curr_tmStp, ] + step # The indiv's next location
@@ -228,7 +228,7 @@ simulateAgents <- function(N_indv = 6,
       if(Curr_indv <= length(Color_indv) & ToPlot==1 ){
         # Plot only up to 6 indiv and only if ToPlot==1
         StepAsLine <- sp::SpatialLines(list(sp::Lines(list(sp::Line(XYind[[Curr_indv]][Curr_tmStp:(Curr_tmStp+1) , ])), 
-                                             ID = Curr_tmStp) )) # Convert line to spatial object for plot
+                                                      ID = Curr_tmStp) )) # Convert line to spatial object for plot
         plot(StepAsLine, add = T, col = Color_indv[Curr_indv], lwd = 4) # Plot the buffer
       } # Plot only up to 6 indiv
       
@@ -246,15 +246,15 @@ simulateAgents <- function(N_indv = 6,
     startIndx <- endIndx+1
   }        
   OutOfTheBox <- sum((XYind_log2$x<  -Scl/2) | 
-                    (XYind_log2$x>   Scl/2) |
-                    (XYind_log2$y<  -Scl/2) |
-                    (XYind_log2$y>   Scl/2) ) /length(XYind_log2$x)
+                       (XYind_log2$x>   Scl/2) |
+                       (XYind_log2$y<  -Scl/2) |
+                       (XYind_log2$y>   Scl/2) ) /length(XYind_log2$x)
   print(paste("out of the box rate", round(OutOfTheBox, digit = 5)))
   
   # Create a list for output with three slots: hr centers, and xy coordinates
-  Name1 <- paste("xyFromSimulationForSNanalysis", N_tmStp, N_indv, 100*EtaCRW, StpSize_ind, DriftHRCenters, ".rdata", sep = "_")
-  Name2 <- "xyFromSimulationForSNanalysis.mat"
-  out <- list("Name1" = Name1, "Name2" = Name2, "HRCntXY" = HRCnt, "XY" = XYind_log2)
+  rName <- paste("sim", N_tmStp, N_indv, 100*EtaCRW, StpSize_ind, DriftHRCenters, ".rdata", sep = "_")
+  matlabName <- "xyFromSimulationForSNanalysis.mat" # keeping the old format for compatibility with Orr's old code
+  out <- list("rName" = rName, "matlabName" = matlabName, "HRCntXY" = HRCnt, "XY" = XYind_log2)
   return(out)
 }
 
@@ -262,6 +262,121 @@ simulateAgents <- function(N_indv = 6,
 # save(list("HRCntXY" = HRCnt, "XY" = XYind_log2), file = Name1)
 # save(list=ls(),file=Name1)
 # R.matlab::writeMat(con = Name2, XY = XYind_log2, HRCntXY = HRCnt) 
+
+# 2. fix_times ------------------------------------------------------------
+# changes day and step to posix. This used to be load_data. You now have to do the loading by yourself. It's too weird to include the process of loading a .Rda file in a function because of the weird naming thing. See implementation of this in workflow.R
+# The input data is the $XY portion of the list returned by simulateAgents().
+
+# XXXK: need to talk to Orr about this sampling interval. Here is what was written in Ryan's code:
+# SAMPLING_INTERVAL <- 10 # "minutes", from matlab code; 10 minutes per timestep with 50 timesteps gives about 8hrs of data
+# KG 2023-09-01 For now I have added sampling_interval as a parameter in this function.
+# XXXK
+
+fix_times <- function(simulation_data, sampling_interval = 10){
+  start_time <- as.POSIXct("2023-08-11 23:50")  # note simulation data starts on day 1 step 1 so the mindate will be 8-13 00:00
+  simulation_data <- simulation_data %>%
+    dplyr::mutate(datetime = start_time + lubridate::days(Day) + lubridate::minutes(StepInDay * sampling_interval)) %>%
+    dplyr::select(indiv, x, y, datetime)
+  return(simulation_data)
+}
+
+# 3. get_edgelist ---------------------------------------------------------
+# gets network graph
+get_edgelist <- function(data, idCol, dateCol){
+  if(is.data.frame(data))
+    data <- data.table::setDT(data)
+  timegroup_data <- spatsoc::group_times(data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
+  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
+}
+
+# 4. loop_days ------------------------------------------------------------
+# loops a single posix around min and max
+loop_days <- function(data, min, max, shift){
+  # shift <- lubridate::days(shift)
+  shift <- 24 * 60 * 60 * shift
+  shifted <- data + shift
+  shifted <- ifelse(shifted > max, min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours"), shifted)
+  # if(shifted > max)
+  #   shifted <- min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours")
+  shifted
+}
+
+# 5. rotate_data_table ----------------------------------------------------
+rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
+  ## SET SEED
+  # set.seed(2023)
+  data_table <- data.frame(data)
+  data_table <- data.table::setDT(data_table)
+  if(is.null(shift)){
+    data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),max(get(dateCol)), sample(1:floor(difftime(max(get(dateCol)), min(get(dateCol)), units="days") - 1), 1)), by = get(idCol)]
+  } else {
+    data_table[, sampledshift := sample(1:shift), by = get(idCol)]
+  }
+  
+  
+  # loop_days <- Vectorize(loop_days)
+  # data_table[, eval(dateCol) := as.POSIXct(mapply(function(w, x, y, z) loop_days(w, x, y, z), get(dateCol), mindate, maxdate, sampledShift))]
+  data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), mindate, maxdate, sampledShift))]
+  data_table[, -c("mindate", "maxdate", "sampledShift")]
+  data_table
+}
+
+# 6. get_stats ------------------------------------------------------------
+get_stats <- function(edgelist){
+  associations <- edgelist %>%
+    dplyr::count(ID1) %>%
+    dplyr::rename("associations" = "n")
+  
+  degree <- edgelist %>%
+    dplyr::group_by(ID1) %>%
+    dplyr::summarise(degree = n_distinct(ID2), .groups = "drop")
+  
+  largest_timegroup <- max(edgelist$timegroup)
+  
+  sri_per_edge <- edgelist %>%
+    dplyr::group_by(ID1, ID2) %>%
+    dplyr::summarise(sri = n()/largest_timegroup, .groups = "drop") # this works now, but will need to update it to literally count the number of time groups when both A and B are tracked, for the case when not everyone is tracked in every time group. Denominator should be [total number of timegroups where both individuals exist in the dataset (were tracked), regardless of whether they interact at that timegroup or not.]
+  
+  mean_sri_and_strength <- sri_per_edge %>%
+    dplyr::group_by(ID1) %>%
+    dplyr::summarise(mean_sri = mean(sri),
+                     strength = sum(sri, na.rm = T), .groups = "drop")
+  
+  stats <- dplyr::inner_join(associations, degree, by = dplyr::join_by(ID1)) %>%
+    dplyr::inner_join(., mean_sri_and_strength, by=dplyr::join_by(ID1))
+  return(stats)
+}
+
+# 7. mean_stats -----------------------------------------------------------
+mean_stats <- function(stats){
+  mean_stats <- stats %>%
+    dplyr::summarise(mean_associations = mean(associations), 
+                     mean_degree = mean(degree), 
+                     mean_sri = mean(mean_sri), 
+                     mean_strength =mean(strength),
+                     .groups = "drop")
+  return(mean_stats)
+}
+
+
+# 8. get_realization_data -------------------------------------------------
+get_realization_data <- function(simulation_data, n, quiet = F){ #XXXK: need to generalize idCol and dateCol, but I don't know how to do that with data.table.
+  realization_data <- data.frame()
+  time_to_rotate <- Sys.time()
+  for(x in 1:n){
+    if(quiet == FALSE){
+      print(paste("Working on realization", x))
+    }
+    
+    rotated_data <- rotate_data_table(simulation_data, idCol = "indiv", dateCol = "datetime")
+    rotated_edgelist <- get_edgelist(rotated_data, idCol = "indiv", dateCol = "datetime")
+    stats <- get_stats(rotated_edgelist)
+    average_stats <- mean_stats(stats)
+    realization_data <- rbind(realization_data, average_stats)
+  }
+  print(Sys.time() - time_to_rotate)
+  return(realization_data)
+}
 
 
 
