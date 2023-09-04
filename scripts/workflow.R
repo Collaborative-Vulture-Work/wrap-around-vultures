@@ -39,8 +39,12 @@ realizations_random <- realizations_random %>%
 
 # 4. Get stats ------------------------------------------------------------
 obs <- get_stats(data = simulation_data, edgelist = get_edgelist(data = simulation_data, idCol = "indiv", dateCol = "datetime"))
-conv <- suppressMessages(map(realizations_conveyor, ~get_stats(get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime")))) %>% purrr::list_rbind(names_to = "iteration")
-rand <- map(realizations_random, ~get_stats(get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))) %>% purrr::list_rbind(names_to = "iteration")
+conv_edges <- map(realizations_conveyor, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime"))
+conv_stats <- map2(.x = realizations_conveyor, .y = conv_edges, ~get_stats(edgelist = .y, data = .x)) %>%
+  purrr::list_rbind(names_to = "iteration")
+rand_edges <- map(realizations_random, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime"))
+rand_stats <- map2(.x = realizations_random, .y = rand_edges, ~get_stats(edgelist = .y, data = .x)) %>%
+  purrr::list_rbind(names_to = "iteration")
 
 perms <- conv %>% mutate(type = "conveyor") %>% bind_rows(rand %>% mutate(type = "random"))
 
@@ -56,6 +60,16 @@ perms %>%
   scale_color_manual(name = "Permutation type", values = c("lightgreen", "lightblue")) + 
   scale_fill_manual(name = "Permutation type", values = c("lightgreen", "lightblue"))+
   geom_point(data = obs, aes(x = ID1, y = degree))
+
+perms %>%
+  ggplot()+
+  geom_boxplot(aes(x = reorder(ID1, strength, mean, decreasing = T), y = strength, 
+                   col = type, fill = type), position = "dodge")+
+  theme_classic()+
+  ylab("Strength") + xlab("Ranked agents")+
+  scale_color_manual(name = "Permutation type", values = c("lightgreen", "lightblue")) + 
+  scale_fill_manual(name = "Permutation type", values = c("lightgreen", "lightblue"))+
+  geom_point(data = obs, aes(x = ID1, y = strength))
 
 
 
