@@ -383,9 +383,15 @@ get_realization_data <- function(simulation_data, n, quiet = F){ #XXXK: need to 
 
 # calcSRI -----------------------------------------------------------------
 # XXX This is pasted in from vultureUtils for now because I was having trouble installing it. Need to fix that.
-calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup"){
+calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup", dateCol = "datetime"){
+  if(!(timegroupCol %in% names(dataset))){
+    if(is.data.frame(dataset))
+      dataset <- data.table::setDT(dataset)
+    dataset <- spatsoc::group_times(dataset, datetime = dateCol, threshold = "10 minutes")
+  }
+  
   # setup for time warning
-  cat("\nComputing SRI... this may take a while if your dataset is large.\n")
+  # cat("\nComputing SRI... this may take a while if your dataset is large.\n")
   start <- Sys.time()
   
   # arg checks
@@ -443,7 +449,7 @@ calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup
   # complete the time message
   end <- Sys.time()
   duration <- difftime(end, start, units = "secs")
-  cat(paste0("SRI computation completed in ", duration, " seconds."))
+  cat(paste0("SRI computation completed in ", round(duration, 3), " seconds.\n"))
   return(dfSRI)
 }
 
