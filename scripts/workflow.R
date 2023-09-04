@@ -40,9 +40,17 @@ rand <- map(realizations_random, ~get_stats(get_edgelist(data = .x, idCol = "ind
 perms <- conv %>% mutate(type = "conveyor") %>% bind_rows(rand %>% mutate(type = "random"))
 
 # 5. Make plot ---------------------------------------------------------------
+ord <- levels(reorder(perms$ID1, perms$degree, mean, decreasing = T))
+obs$ID1 <- factor(obs$ID1, levels = ord)
 perms %>%
-  ggplot(aes(x = ID1, y = degree, col = type, fill = type))+
-  geom_boxplot(position = "dodge")+
-  theme_classic()
+  ggplot()+
+  geom_boxplot(aes(x = reorder(ID1, degree, mean, decreasing = T), y = degree, 
+                   col = type, fill = type), position = "dodge")+
+  theme_classic()+
+  ylab("Degree") + xlab("Ranked agents")+
+  scale_color_manual(name = "Permutation type", values = c("lightgreen", "lightblue")) + 
+  scale_fill_manual(name = "Permutation type", values = c("lightgreen", "lightblue"))+
+  geom_point(data = obs, aes(x = ID1, y = degree))
+
 
 
