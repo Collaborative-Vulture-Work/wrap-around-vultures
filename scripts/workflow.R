@@ -2,9 +2,11 @@
 # Created by Kaija Gahm. Order of steps is adapted from the steps in the main() function that Ryan wrote initially over in datastream_shifter.R.
 source("scripts/functions.R") # pulls in all the functions (written by Orr and Ryan)
 library(tidyverse) # for data wrangling and plotting
+library(spatsoc) # to implement the trajectory randomization method as described in Orr's paper
 
 # 1. Run the simulation to obtain simulated data --------------------------
-sim_data <- simulateAgents(N_indv = 6, DaysToSimulate = 10, Kappa_ind = 3, quiet = T, ToPlot = 0)
+# RANDOM
+sim_data <- simulateAgents(N_indv = 10, DaysToSimulate = 10, Kappa_ind = 3, quiet = T, ToPlot = 0)
 str(sim_data, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
 save(sim_data, file = "data/sim_data.Rda") # XXXK come back to this
@@ -17,5 +19,30 @@ load("data/sim_data.Rda")
 simulation_data <- sim_data$XY # extract just the XY coords
 simulation_data <- fix_times(simulation_data)
 
-# Get permutation realizations --------------------------------------------
-realizations <- get_realization_data(simulation_data, n = 100, shift = 5)
+# 3. Get permutation realizations -----------------------------------------
+n <- 100
+realizations_conveyor <- vector(mode = "list", length = n)
+for(i in 1:n){
+  realizations_conveyor[[i]] <- rotate_data_table(data = simulation_data, idCol = "indiv", dateCol = "datetime")
+}
+data.table::setDT(simulation_data)
+simulation_data$datetime <- as.POSIXct(simulation_data$datetime)
+realizations_random <- randomizations(DT = simulation_data, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = 100) %>%
+  filter(iteration != 0) # remove the original, since the original is `simulation_data`
+realizations_random <- realizations_random %>%
+  group_split(iteration, .keep = TRUE)
+
+# 4. Get stats ------------------------------------------------------------
+obs <- get_stats(get_edgelist(data = simulation_data, idCol = "indiv", dateCol = "datetime"))
+conv <- suppressMessages(map(realizations_conveyor, ~get_stats(get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime")))) %>% purrr::list_rbind(names_to = "iteration")
+rand <- map(realizations_random, ~get_stats(get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))) %>% purrr::list_rbind(names_to = "iteration")
+
+perms <- conv %>% mutate(type = "conveyor") %>% bind_rows(rand %>% mutate(type = "random"))
+
+# 5. Make plot ---------------------------------------------------------------
+perms %>%
+  ggplot(aes(x = ID1, y = degree, col = type, fill = type))+
+  geom_boxplot(position = "dodge")+
+  theme_classic()
+
+

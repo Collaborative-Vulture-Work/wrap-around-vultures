@@ -1,5 +1,12 @@
 # FUNCTION DEFINITIONS
 # To be used in the rest of the workflow for this project.
+library(dplyr)
+library(lubridate)
+library(data.table)
+library(spatsoc)
+library(multidplyr)
+#devtools::install_github("kaijagahm/vultureUtils")
+# library(vultureUtils)
 
 # 1. simulateAgents -------------------------------------------------------
 ## this code generates data for testing the method of social network randomizations ###
@@ -63,7 +70,7 @@ simulateAgents <- function(N_indv = 6,
                         scale = StpStd_ind^2/StpSize_ind)))  
     
     # 2. Rose diagram of step directions
-    rose.diag(rvm(n=10000, 
+    CircStats::rose.diag(CircStats::rvm(n=10000, 
                   mean = 0,
                   k = Kappa_ind),
               bins=72, 
@@ -322,7 +329,7 @@ rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
 }
 
 # 6. get_stats ------------------------------------------------------------
-get_stats <- function(edgelist){
+get_stats <- function(edgelist, data){
   associations <- edgelist %>%
     dplyr::count(ID1) %>%
     dplyr::rename("associations" = "n")
@@ -331,12 +338,8 @@ get_stats <- function(edgelist){
     dplyr::group_by(ID1) %>%
     dplyr::summarise(degree = n_distinct(ID2), .groups = "drop")
   
-  largest_timegroup <- max(edgelist$timegroup)
-  
-  sri_per_edge <- edgelist %>%
-    dplyr::group_by(ID1, ID2) %>%
-    dplyr::summarise(sri = n()/largest_timegroup, .groups = "drop") # this works now, but will need to update it to literally count the number of time groups when both A and B are tracked, for the case when not everyone is tracked in every time group. Denominator should be [total number of timegroups where both individuals exist in the dataset (were tracked), regardless of whether they interact at that timegroup or not.]
-  
+  sri_per_edge <- calcSRI(dataset = data, edges = edgelist, idCol = "indiv", timegroupCol = "timegroup")
+
   mean_sri_and_strength <- sri_per_edge %>%
     dplyr::group_by(ID1) %>%
     dplyr::summarise(mean_sri = mean(sri),
@@ -378,23 +381,70 @@ get_realization_data <- function(simulation_data, n, quiet = F){ #XXXK: need to 
   return(realization_data)
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# calcSRI -----------------------------------------------------------------
+# XXX This is pasted in from vultureUtils for now because I was having trouble installing it. Need to fix that.
+calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup"){
+  # setup for time warning
+  cat("\nComputing SRI... this may take a while if your dataset is large.\n")
+  start <- Sys.time()
+  
+  # arg checks
+  checkmate::assertSubset(timegroupCol, names(dataset))
+  checkmate::assertSubset(idCol, names(dataset))
+  checkmate::assertDataFrame(dataset)
+  checkmate::assertDataFrame(edges)
+  
+  edges <- dplyr::as_tibble(edges)
+  
+  ## get individuals per timegroup as a list
+  # Info about timegroups and individuals, for SRI calculation
+  timegroupsList <- dataset %>%
+    dplyr::select(tidyselect::all_of(c(timegroupCol, idCol))) %>%
+    dplyr::mutate({{idCol}} := as.character(.data[[idCol]])) %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(.data[[timegroupCol]]) %>%
+    dplyr::group_split() %>%
+    purrr::map(~.x[[idCol]])
+  
+  ## get unique set of timegroups
+  timegroups <- unique(dataset[[timegroupCol]])
+  
+  ## get all unique pairs of individuals
+  inds <- as.character(unique(dataset[[idCol]]))
+  allPairs <- expand.grid(ID1 = as.character(inds), ID2 = as.character(inds), stringsAsFactors = F) %>%
+    dplyr::filter(ID1 < ID2)
+  
+  # wide data
+  datasetWide <- dataset %>%
+    sf::st_drop_geometry() %>%
+    dplyr::select(tidyselect::all_of(c(timegroupCol, idCol))) %>%
+    dplyr::distinct() %>%
+    dplyr::mutate(val = TRUE) %>%
+    tidyr::pivot_wider(id_cols = tidyselect::all_of(timegroupCol), names_from = tidyselect::all_of(idCol),
+                       values_from = "val", values_fill = FALSE)
+  
+  ## get SRI information
+  dfSRI <- purrr::pmap_dfr(allPairs, ~{
+    a <- .x
+    b <- .y
+    colA <- datasetWide[,a]
+    colB <- datasetWide[,b]
+    nBoth <- sum(colA & colB)
+    x <- nrow(unique(edges[edges$ID1 %in% c(a, b) & edges$ID2 %in% c(a, b), timegroupCol]))
+    yab <- nBoth - x
+    sri <- x/(x+yab)
+    if(is.infinite(sri)){
+      sri <- 0
+    }
+    dfRow <- data.frame("ID1" = a, "ID2" = b, "sri" = sri)
+    return(dfRow)
+  })
+  
+  # complete the time message
+  end <- Sys.time()
+  duration <- difftime(end, start, units = "secs")
+  cat(paste0("SRI computation completed in ", duration, " seconds."))
+  return(dfSRI)
+}
 
 
