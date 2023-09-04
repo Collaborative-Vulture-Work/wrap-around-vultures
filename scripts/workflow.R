@@ -21,19 +21,24 @@ simulation_data <- fix_times(simulation_data)
 
 # 3. Get permutation realizations -----------------------------------------
 n <- 100
+# CONVEYOR
 realizations_conveyor <- vector(mode = "list", length = n)
 for(i in 1:n){
   realizations_conveyor[[i]] <- rotate_data_table(data = simulation_data, idCol = "indiv", dateCol = "datetime")
 }
+realizations_conveyor <- map(realizations_conveyor, as.data.frame) # turn back to data frame
+
+# RANDOM
+# prepare simulation data for randomization method
 data.table::setDT(simulation_data)
 simulation_data$datetime <- as.POSIXct(simulation_data$datetime)
-realizations_random <- randomizations(DT = simulation_data, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = 100) %>%
-  filter(iteration != 0) # remove the original, since the original is `simulation_data`
+realizations_random <- randomizations(DT = simulation_data, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n) %>%
+  filter(iteration != 0) %>% as.data.frame() # remove the original, since the original is `simulation_data`
 realizations_random <- realizations_random %>%
   group_split(iteration, .keep = TRUE)
 
 # 4. Get stats ------------------------------------------------------------
-obs <- get_stats(get_edgelist(data = simulation_data, idCol = "indiv", dateCol = "datetime"))
+obs <- get_stats(data = simulation_data, edgelist = get_edgelist(data = simulation_data, idCol = "indiv", dateCol = "datetime"))
 conv <- suppressMessages(map(realizations_conveyor, ~get_stats(get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime")))) %>% purrr::list_rbind(names_to = "iteration")
 rand <- map(realizations_random, ~get_stats(get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))) %>% purrr::list_rbind(names_to = "iteration")
 
