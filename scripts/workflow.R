@@ -6,7 +6,7 @@ library(spatsoc) # to implement the trajectory randomization method as described
 
 # 1. Run the simulation to obtain simulated data --------------------------
 # NON-SOCIABLE
-sim_data_ns <- simulateAgents(N_indv = 10, DaysToSimulate = 10, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
+sim_data_ns <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
 str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
 save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
@@ -14,7 +14,7 @@ save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
 # R.matlab::writeMat(con = paste0("data/", sim_data_ns$matlabName), XY = sim_data_ns$XY, HRCntXY = sim_data_ns$HRCntXY)
 
 # SOCIABLE
-sim_data_s <- simulateAgents(N_indv = 10, DaysToSimulate = 10, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 2000)
+sim_data_s <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 2000)
 # Save R data:
 save(sim_data_s, file = "data/sim_data_s.Rda")
 
@@ -95,28 +95,78 @@ ord_str_s <- obs_stats_s %>% arrange(desc(strength)) %>% pull(ID1)
 ord_deg_ns <- obs_stats_ns %>% arrange(desc(degree)) %>% pull(ID1)
 ord_str_ns <- obs_stats_ns %>% arrange(desc(strength)) %>% pull(ID1)
 
-perms_stats %>%
+deg_boxplot <- perms_stats %>%
   mutate(ID1 = factor(ID1, levels = ord_deg_s)) %>%
   ggplot()+
   geom_boxplot(aes(x = ID1, y = degree, 
                    col = type, fill = type), position = "dodge")+
   theme_classic()+
   ylab("Degree") + xlab("Ranked agents")+
-  scale_color_manual(name = "Permutation type", values = c("lightgreen", "lightblue")) + 
-  scale_fill_manual(name = "Permutation type", values = c("lightgreen", "lightblue"))+
+  scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue")) + 
+  scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   geom_point(data = obs_stats %>% mutate(ID1 = factor(ID1, levels = ord_deg_s)), 
              aes(x = ID1, y = degree))+
   facet_wrap(~sociable)
+deg_boxplot
+ggsave(deg_boxplot, file = "fig/degree_boxplot.png", width = 7, height = 4)
 
-perms_stats %>%
+str_boxplot <- perms_stats %>%
   mutate(ID1 = factor(ID1, levels = ord_str_s)) %>%
   ggplot()+
   geom_boxplot(aes(x = ID1, y = strength, 
                    col = type, fill = type), position = "dodge")+
   theme_classic()+
   ylab("Strength") + xlab("Ranked agents")+
-  scale_color_manual(name = "Permutation type", values = c("lightgreen", "lightblue")) + 
-  scale_fill_manual(name = "Permutation type", values = c("lightgreen", "lightblue"))+
+  scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue")) + 
+  scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   geom_point(data = obs_stats %>% mutate(ID1 = factor(ID1, levels = ord_str_s)), 
              aes(x = ID1, y = strength))+
   facet_wrap(~sociable)
+str_boxplot
+ggsave(str_boxplot, file = "fig/strength_boxplot.png", width = 7, height = 4)
+
+# Insets: mean values for entire population per realization
+obs_mns <- obs_stats %>%
+  group_by(sociable) %>%
+  summarize(mndeg = mean(degree),
+            mnstr = mean(strength))
+
+perm_mns <- perms_stats %>%
+  group_by(iteration, sociable, type) %>%
+  summarize(mndeg = mean(degree),
+            mnstr = mean(strength))
+
+deg_hist <- perm_mns %>%
+  ggplot(aes(x = mndeg, col = type, fill = type))+
+  geom_histogram(alpha = 0.5, position = "identity")+
+  facet_wrap(~sociable, scales = "free")+
+  theme_classic()+
+  geom_vline(data = obs_mns, aes(xintercept = mndeg), linewidth = 1, linetype = 2)+
+  scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
+  scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
+  ylab("")+ xlab("Mean degree") # as expected, we see no difference from either of the permutations for the non-sociable agents, but we do see a difference for the sociable agents. Intriguingly, we also see a difference between the results for the conveyor belt vs. random permutations! Though it's worth noting, that difference goes in the opposite direction I would have expected--I would have thought conveyour would be more similar to observed, not more different.
+ggsave(deg_hist, file = "fig/deg_hist.png", width = 7, height = 4)
+
+str_hist <- perm_mns %>%
+  ggplot(aes(x = mnstr, col = type, fill = type))+
+  geom_histogram(alpha = 0.5, position = "identity")+
+  facet_wrap(~sociable, scales = "free")+
+  theme_classic()+
+  geom_vline(data = obs_mns, aes(xintercept = mnstr), linewidth = 1, linetype = 2)+
+  scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
+  scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
+  ylab("")+ xlab("Mean strength") # X axis is weird on the sociable histogram because the line is far enough over to make everything else really crunched up.
+ggsave(str_hist, file = "fig/str_hist.png", width = 7, height = 4)
+
+# As a point of comparison, let's examine just the sociable strength histogram to compare conveyor vs. random, without the line
+perm_mns %>%
+  filter(sociable == "sociable") %>%
+  ggplot(aes(x = mnstr, col = type, fill = type))+
+  geom_histogram(alpha = 0.5, position = "identity")+
+  theme_classic()+
+  scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
+  scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
+  ylab("")+ xlab("Mean strength") # huh, interesting, not as much differentiation here! Conveyor gives a wider range of values than random, and the distribution might be a bit different too (skewed vs. normal)
+
+# Next figure: x axis = level of sociability. y axis = [obs-random delta], col = permutation type, only sociable. Facets: degree/strength
+# For this to work, we need to do permutations with different levels of sociability. I think this is controlled by kappa. 
