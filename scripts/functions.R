@@ -309,15 +309,20 @@ loop_days <- function(data, min, max, shift){
 }
 
 # 5. rotate_data_table ----------------------------------------------------
-rotate_data_table <- function(data, idCol, dateCol, shift=NULL){
+rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
   ## SET SEED
   # set.seed(2023)
   data_table <- data.frame(data)
   data_table <- data.table::setDT(data_table)
   if(is.null(shift)){
-    data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),max(get(dateCol)), sample(1:floor(difftime(max(get(dateCol)), min(get(dateCol)), units="days") - 1), 1)), by = get(idCol)]
+    data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),
+                                                                 max(get(dateCol)),
+                                                                 sample(1:floor(difftime(max(get(dateCol)),
+                                                                                         min(get(dateCol)), units="days") - 1),
+                                                                        1)),
+               by = get(idCol)]
   } else {
-    data_table[, sampledshift := sample(1:shift), by = get(idCol)]
+    data_table[, sampledshift := sample(1:shiftMax), by = get(idCol)]
   }
   
   
