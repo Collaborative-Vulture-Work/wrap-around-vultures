@@ -298,15 +298,73 @@ get_edgelist <- function(data, idCol, dateCol){
 
 # 4. loop_days ------------------------------------------------------------
 # loops a single posix around min and max
-loop_days <- function(data, min, max, shift){
-  # shift <- lubridate::days(shift)
-  shift <- 24 * 60 * 60 * shift
-  shifted <- data + shift
-  shifted <- ifelse(shifted > max, min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours"), shifted)
-  # if(shifted > max)
-  #   shifted <- min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours")
-  shifted
+loop_days <- function(data, min, max, shift) {
+  days_to_shift <- abs(shift)
+  days_shifted <- 0
+  currentdate <- data
+  while(days_shifted < days_to_shift){
+    if(shift > 0){ # code for positive shifts
+      # add 1 to the date
+      nextdate <- currentdate + (24*60*60)
+      # check if it's too high, and reset to the minimum if so
+      if(nextdate > max){
+        nextdate <- min
+      }
+      # update the counter
+      days_shifted <- days_shifted + 1
+      # update the current date
+      currentdate <- nextdate
+    }else{ # code for negative shifts
+      # subtract 1 from the date
+      nextdate <- currentdate - (24*60*60) # something is going wrong with subtracting this amount. Have to find a better way to subtract 1 day.
+      # check if it's too low, and reset to the maximum if so
+      if(nextdate < min){
+        print("ding\n")
+        nextdate <- max
+      }
+      # update the counter
+      days_shifted <- days_shifted + 1
+      # update the current date
+      currentdate <- nextdate
+    }
+  }
+  return(currentdate)
 }
+  
+  
+  while(days_shifted < abs(shift)){
+    if(shift > 0){
+      nextdate <- data + (24*60*60)
+    }else{
+      nextdate <- data - (24*60*60)
+    }
+    # update counter
+    days_shifted <- days_shifted + 1
+    
+    # loop around if need be
+    if(nextdate > max){
+      nextdate <- min
+    }else if(nextdate < min){
+      nextdate <- max
+    }
+    data <- nextdate
+  }
+  return(data)
+}
+
+# Test cases
+data <- as.POSIXct("2023-08-13", tz = "UTC")
+min_date <- as.POSIXct("2023-08-11", tz = "UTC")
+max_date <- as.POSIXct("2023-08-15", tz = "UTC")
+
+shift_positive <- 3
+shift_negative <- -4
+
+result_positive <- loop_days(data, min_date, max_date, shift_positive)
+result_negative <- loop_days(data, min_date, max_date, shift_negative)
+
+print(result_positive) # Should print 2023-08-11
+print(result_negative) # Should print 2023-08-14
 
 # 5. rotate_data_table ----------------------------------------------------
 rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
@@ -314,7 +372,7 @@ rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
   # set.seed(2023)
   data_table <- data.frame(data)
   data_table <- data.table::setDT(data_table)
-  if(is.null(shift)){
+  if(is.null(shiftMax)){
     data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),
                                                                  max(get(dateCol)),
                                                                  sample(1:floor(difftime(max(get(dateCol)),
@@ -322,15 +380,24 @@ rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
                                                                         1)),
                by = get(idCol)]
   } else {
-    data_table[, sampledshift := sample(1:shiftMax), by = get(idCol)]
+    sample_choice <- function(x){ # write a function that chooses one sample from the range 1:shiftMax.
+      base::sample(x = 1:shiftMax, size = 1)
+    }
+    data_table[, sampledShift := sample_choice(.SD), by = get(idCol)] # the .SD syntax is how we tell data.table to do the function separately per group of data. Not entirely sure why the `by` argument isn't sufficient for this; it seems like it should be.
+    data_table[, c("mindate", "maxdate") := list(min(get(dateCol)),
+                                                 max(get(dateCol))),
+               by = get(idCol)]
   }
   
-  
-  # loop_days <- Vectorize(loop_days)
-  # data_table[, eval(dateCol) := as.POSIXct(mapply(function(w, x, y, z) loop_days(w, x, y, z), get(dateCol), mindate, maxdate, sampledShift))]
-  data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), mindate, maxdate, sampledShift))]
-  data_table[, -c("mindate", "maxdate", "sampledShift")]
-  data_table
+  data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), 
+                                                     mindate, maxdate, 
+                                                     sampledShift))]
+  to_remove <- c("mindate", "maxdate", "sampledShift")
+  existing <- intersect(names(data_table), to_remove)
+  if(length(existing) > 0){
+    data_table[, (existing) := NULL]
+  }
+  return(data_table)
 }
 
 # 6. get_stats ------------------------------------------------------------
