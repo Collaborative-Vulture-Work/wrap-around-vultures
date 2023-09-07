@@ -319,7 +319,6 @@ loop_days <- function(data, min, max, shift) {
       nextdate <- currentdate - (24*60*60) # something is going wrong with subtracting this amount. Have to find a better way to subtract 1 day.
       # check if it's too low, and reset to the maximum if so
       if(nextdate < min){
-        print("ding\n")
         nextdate <- max
       }
       # update the counter
@@ -329,27 +328,6 @@ loop_days <- function(data, min, max, shift) {
     }
   }
   return(currentdate)
-}
-  
-  
-  while(days_shifted < abs(shift)){
-    if(shift > 0){
-      nextdate <- data + (24*60*60)
-    }else{
-      nextdate <- data - (24*60*60)
-    }
-    # update counter
-    days_shifted <- days_shifted + 1
-    
-    # loop around if need be
-    if(nextdate > max){
-      nextdate <- min
-    }else if(nextdate < min){
-      nextdate <- max
-    }
-    data <- nextdate
-  }
-  return(data)
 }
 
 # Test cases
