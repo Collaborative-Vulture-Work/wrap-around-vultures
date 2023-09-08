@@ -71,12 +71,12 @@ simulateAgents <- function(N_indv = 6,
     
     # 2. Rose diagram of step directions
     CircStats::rose.diag(CircStats::rvm(n=10000, 
-                  mean = 0,
-                  k = Kappa_ind),
-              bins=72, 
-              pch = 16, 
-              cex = 1, 
-              shrink = 1)
+                                        mean = 0,
+                                        k = Kappa_ind),
+                         bins=72, 
+                         pch = 16, 
+                         cex = 1, 
+                         shrink = 1)
   }
   
   # Prepare variables for storing data --------------------------------------
@@ -296,7 +296,6 @@ get_edgelist <- function(data, idCol, dateCol){
   spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
-
 # 4. loop_days ---------------------------------------------------------------
 # loops a single posix around min and max
 loop_day <- function(data, min, max, shift) {
@@ -350,6 +349,8 @@ rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
   # set.seed(2023)
   data_table <- data.frame(data)
   data_table <- data.table::setDT(data_table)
+  
+  # For each individual, get min and max date and amount to shift by.
   if(is.null(shiftMax)){
     data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),
                                                                  max(get(dateCol)),
@@ -367,6 +368,7 @@ rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
                by = get(idCol)]
   }
   
+  # Loop the days
   data_table[, eval(dateCol) := as.POSIXct(loop_days(dates = get(dateCol), 
                                                      mins = mindate, maxes = maxdate, 
                                                      shifts = sampledShift))]
@@ -376,6 +378,49 @@ rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
     data_table[, (existing) := NULL]
   }
   return(data_table)
+}
+
+
+# 5.5 conveyor ------------------------------------------------------------
+p_conveyor <- function(dataset, shiftMax, idCol = "Nili_id", dateCol = "dateOnly", timeCol = "timeOnly"){
+  indivList <- dataset %>%
+    group_by(.data[[idCol]]) %>%
+    group_split(.keep = T)
+  joined <- vector(mode = "list", length = length(indivList))
+  for(indiv in 1:length(indivList)){
+    x <- indivList[[indiv]]
+    shift <- sample(-(shiftMax):shiftMax, size = 1)
+    #cat(shift, "\n")
+    # get all unique days that show up
+    days <- sort(unique(x[[dateCol]]))
+    
+    # get min and max dates to shift around (the "poles" of the conveyor)
+    selfMinDate <- min(days, na.rm = T)
+    selfMaxDate <- max(days, na.rm = T)
+    
+    # create a total sequence of dates to select from
+    daysFilled <- seq(lubridate::ymd(selfMinDate), lubridate::ymd(selfMaxDate), by = "day")
+    # converting to numbers so we can use %%--which dates are the ones we started with?
+    vec <- which(daysFilled %in% days)
+    shiftedvec <- vec + shift # shift
+    new <- (shiftedvec - min(vec)) %% (max(vec)-min(vec)+1)+1 # new dates as numbers
+    shiftedDates <- daysFilled[new] # select those dates from the possibilities
+    
+    # Make a data frame to hold the old and new dates
+    daysDF <- bind_cols({{dateCol}} := days, 
+                        "newDate" = shiftedDates,
+                        shift = shift)
+    nw <- left_join(x, daysDF, by = dateCol)
+    nw$oldDate <- nw[[dateCol]]
+    nw[[dateCol]] <- nw$newDate
+    
+    if(!is.null(timeCol)){
+      nw$newdatetime <- lubridate::ymd_hms(paste(nw$newDate, nw[[timeCol]]))
+    }
+    joined[[indiv]] <- nw
+  }
+  out <- purrr::list_rbind(joined)
+  return(out)
 }
 
 # 6. get_stats ------------------------------------------------------------
@@ -389,7 +434,7 @@ get_stats <- function(edgelist, data){
     dplyr::summarise(degree = n_distinct(ID2), .groups = "drop")
   
   sri_per_edge <- calcSRI(dataset = data, edges = edgelist, idCol = "indiv", timegroupCol = "timegroup")
-
+  
   mean_sri_and_strength <- sri_per_edge %>%
     dplyr::group_by(ID1) %>%
     dplyr::summarise(mean_sri = mean(sri),
