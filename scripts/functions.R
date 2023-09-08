@@ -296,93 +296,10 @@ get_edgelist <- function(data, idCol, dateCol){
   spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
-# 4. loop_days ---------------------------------------------------------------
-# loops a single posix around min and max
-loop_day <- function(data, min, max, shift) {
-  days_to_shift <- abs(shift)
-  days_shifted <- 0
-  currentdate <- data
-  while(days_shifted < days_to_shift){
-    if(shift > 0){ # code for positive shifts
-      # add 1 to the date
-      nextdate <- currentdate + (24*60*60)
-      # check if it's too high, and reset to the minimum if so
-      if(nextdate > max){
-        nextdate <- min
-      }
-      # update the counter
-      days_shifted <- days_shifted + 1
-      # update the current date
-      currentdate <- nextdate
-    }else{ # code for negative shifts
-      # subtract 1 from the date
-      nextdate <- currentdate - (24*60*60) # something is going wrong with subtracting this amount. Have to find a better way to subtract 1 day.
-      # check if it's too low, and reset to the maximum if so
-      if(nextdate < min){
-        nextdate <- max
-      }
-      # update the counter
-      days_shifted <- days_shifted + 1
-      # update the current date
-      currentdate <- nextdate
-    }
-  }
-  return(currentdate)
-}
-
-# function that takes vectors and passes them to loop_day in a for loop
-loop_days <- function(dates, mins, maxes, shifts){
-  outdates <- rep(NA, length(dates))
-  for(i in 1:length(dates)){
-    data <- dates[i]
-    min <- mins[i]
-    max <- maxes[i]
-    shift <- shifts[i]
-    outdates[i] <- loop_day(data, min, max, shift)
-  }
-  return(outdates)
-}
-
-# 5. rotate_data_table ----------------------------------------------------
-rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
-  ## SET SEED
-  # set.seed(2023)
-  data_table <- data.frame(data)
-  data_table <- data.table::setDT(data_table)
-  
-  # For each individual, get min and max date and amount to shift by.
-  if(is.null(shiftMax)){
-    data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),
-                                                                 max(get(dateCol)),
-                                                                 sample(1:floor(difftime(max(get(dateCol)),
-                                                                                         min(get(dateCol)), units="days") - 1),
-                                                                        1)),
-               by = get(idCol)]
-  } else {
-    sample_choice <- function(x){ # write a function that chooses one sample from the range 1:shiftMax.
-      base::sample(x = 1:shiftMax, size = 1)
-    }
-    data_table[, sampledShift := sample_choice(.SD), by = get(idCol)] # the .SD syntax is how we tell data.table to do the function separately per group of data. Not entirely sure why the `by` argument isn't sufficient for this; it seems like it should be.
-    data_table[, c("mindate", "maxdate") := list(min(get(dateCol)),
-                                                 max(get(dateCol))),
-               by = get(idCol)]
-  }
-  
-  # Loop the days
-  data_table[, eval(dateCol) := as.POSIXct(loop_days(dates = get(dateCol), 
-                                                     mins = mindate, maxes = maxdate, 
-                                                     shifts = sampledShift))]
-  to_remove <- c("mindate", "maxdate", "sampledShift")
-  existing <- intersect(names(data_table), to_remove)
-  if(length(existing) > 0){
-    data_table[, (existing) := NULL]
-  }
-  return(data_table)
-}
-
-
-# 5.5 conveyor ------------------------------------------------------------
-p_conveyor <- function(dataset, shiftMax, idCol = "Nili_id", dateCol = "dateOnly", timeCol = "timeOnly"){
+# 5 rotate_data_table ------------------------------------------------------------
+# Note: this no longer actually takes a data_table, just keeping the name for consistency with previous.
+# Unlike the previous function, this one requires that you separate the dates and times into separate columns beforehand.
+rotate_data_table <- function(dataset, shiftMax, idCol = "indiv", dateCol = "date", timeCol = "time"){
   indivList <- dataset %>%
     group_by(.data[[idCol]]) %>%
     group_split(.keep = T)
@@ -411,8 +328,6 @@ p_conveyor <- function(dataset, shiftMax, idCol = "Nili_id", dateCol = "dateOnly
                         "newDate" = shiftedDates,
                         shift = shift)
     nw <- left_join(x, daysDF, by = dateCol)
-    nw$oldDate <- nw[[dateCol]]
-    nw[[dateCol]] <- nw$newDate
     
     if(!is.null(timeCol)){
       nw$newdatetime <- lubridate::ymd_hms(paste(nw$newDate, nw[[timeCol]]))
