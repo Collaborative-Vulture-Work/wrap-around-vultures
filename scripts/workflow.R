@@ -29,20 +29,32 @@ sd_s <- sim_data_s$XY # extract just the XY coords
 sd_s <- fix_times(sd_s)
 save(sd_s, file = "data/sd_s.Rda")
 
+# 2.5 create separate date and time columns -------------------------------
+# Need this as a precursor for rotate_data_table.
+sd_ns$date <- lubridate::date(sd_ns$datetime)
+sd_ns$time <- stringr::str_extract(sd_ns$datetime, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
+sd_ns$time <- replace_na(sd_ns$time, "00:00:00")
+
+sd_s$date <- lubridate::date(sd_s$datetime)
+sd_s$time <- stringr::str_extract(sd_s$datetime, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
+sd_s$time <- replace_na(sd_s$time, "00:00:00")
+
 # 3. Get permutation realizations -----------------------------------------
-n <- 25
+n <- 100
+sm <- 5 # can shift 5 days in either direction, 10 day range total
 # CONVEYOR
 ## Conveyor: NON-SOCIABLE
 realizations_conveyor_ns <- vector(mode = "list", length = n)
 for(i in 1:n){
   cat(".")
-  realizations_conveyor_ns[[i]] <- as.data.frame(rotate_data_table(data = sd_ns, idCol = "indiv", dateCol = "datetime", shiftMax = 5))
+  realizations_conveyor_ns[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
 ## Conveor: SOCIABLE
 realizations_conveyor_s <- vector(mode = "list", length = n)
 for(i in 1:n){
-  realizations_conveyor_s[[i]] <- as.data.frame(rotate_data_table(data = sd_s, idCol = "indiv", dateCol = "datetime"))
+  cat(".")
+  realizations_conveyor_s[[i]] <- rotate_data_table(dataset = sd_s, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
 # RANDOM
@@ -61,7 +73,7 @@ realizations_random_s <- as.data.frame(randomizations(DT = sd_s, type = "traject
 # 4. Get stats ------------------------------------------------------------
 # NON-SOCIABLE
 obs_stats_ns <- get_stats(data = sd_ns, edgelist = get_edgelist(data = sd_ns, idCol = "indiv", dateCol = "datetime"))
-conv_edges_ns <- map(realizations_conveyor_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime"))
+conv_edges_ns <- map(realizations_conveyor_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_ns <- map2(.x = realizations_conveyor_ns, .y = conv_edges_ns, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 rand_edges_ns <- map(realizations_random_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
@@ -72,7 +84,7 @@ perms_stats_ns <- conv_stats_ns %>% mutate(type = "conveyor") %>% bind_rows(rand
 
 # SOCIABLE
 obs_stats_s <- get_stats(data = sd_s, edgelist = get_edgelist(data = sd_s, idCol = "indiv", dateCol = "datetime"))
-conv_edges_s <- map(realizations_conveyor_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime"))
+conv_edges_s <- map(realizations_conveyor_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_s <- map2(.x = realizations_conveyor_s, .y = conv_edges_s, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 rand_edges_s <- map(realizations_random_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
