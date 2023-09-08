@@ -296,9 +296,10 @@ get_edgelist <- function(data, idCol, dateCol){
   spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
-# 4. loop_days ------------------------------------------------------------
+
+# 4. loop_days ---------------------------------------------------------------
 # loops a single posix around min and max
-loop_days <- function(data, min, max, shift) {
+loop_day <- function(data, min, max, shift) {
   days_to_shift <- abs(shift)
   days_shifted <- 0
   currentdate <- data
@@ -330,19 +331,18 @@ loop_days <- function(data, min, max, shift) {
   return(currentdate)
 }
 
-# Test cases
-data <- as.POSIXct("2023-08-13", tz = "UTC")
-min_date <- as.POSIXct("2023-08-11", tz = "UTC")
-max_date <- as.POSIXct("2023-08-15", tz = "UTC")
-
-shift_positive <- 3
-shift_negative <- -4
-
-result_positive <- loop_days(data, min_date, max_date, shift_positive)
-result_negative <- loop_days(data, min_date, max_date, shift_negative)
-
-print(result_positive) # Should print 2023-08-11
-print(result_negative) # Should print 2023-08-14
+# function that takes vectors and passes them to loop_day in a for loop
+loop_days <- function(dates, mins, maxes, shifts){
+  outdates <- rep(NA, length(dates))
+  for(i in 1:length(dates)){
+    data <- dates[i]
+    min <- mins[i]
+    max <- maxes[i]
+    shift <- shifts[i]
+    outdates[i] <- loop_day(data, min, max, shift)
+  }
+  return(outdates)
+}
 
 # 5. rotate_data_table ----------------------------------------------------
 rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
@@ -367,9 +367,9 @@ rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
                by = get(idCol)]
   }
   
-  data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), 
-                                                     mindate, maxdate, 
-                                                     sampledShift))]
+  data_table[, eval(dateCol) := as.POSIXct(loop_days(dates = get(dateCol), 
+                                                     mins = mindate, maxes = maxdate, 
+                                                     shifts = sampledShift))]
   to_remove <- c("mindate", "maxdate", "sampledShift")
   existing <- intersect(names(data_table), to_remove)
   if(length(existing) > 0){
