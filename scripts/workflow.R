@@ -6,65 +6,74 @@ library(spatsoc) # to implement the trajectory randomization method as described
 
 # 1. Run the simulation to obtain simulated data --------------------------
 # NON-SOCIABLE
-sim_data_ns <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
-str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
+# sim_data_ns <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
+# str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
-save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
+# save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
 # Save Matlab data: (note: this can take a really long time!)
 # R.matlab::writeMat(con = paste0("data/", sim_data_ns$matlabName), XY = sim_data_ns$XY, HRCntXY = sim_data_ns$HRCntXY)
 
 # SOCIABLE
-sim_data_s <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 2000)
+# sim_data_s <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 2000)
 # Save R data:
-save(sim_data_s, file = "data/sim_data_s.Rda")
+# save(sim_data_s, file = "data/sim_data_s.Rda")
 
 # 2. Load the simulated data and extract the xy coords --------------------
 load("data/sim_data_ns.Rda")
 sd_ns <- sim_data_ns$XY # extract just the XY coords
 sd_ns <- fix_times(sd_ns)
+save(sd_ns, file = "data/sd_ns.Rda")
 
 load("data/sim_data_s.Rda")
 sd_s <- sim_data_s$XY # extract just the XY coords
 sd_s <- fix_times(sd_s)
+save(sd_s, file = "data/sd_s.Rda")
+
+# 2.5 create separate date and time columns -------------------------------
+# Need this as a precursor for rotate_data_table.
+sd_ns$date <- lubridate::date(sd_ns$datetime)
+sd_ns$time <- stringr::str_extract(sd_ns$datetime, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
+sd_ns$time <- replace_na(sd_ns$time, "00:00:00")
+
+sd_s$date <- lubridate::date(sd_s$datetime)
+sd_s$time <- stringr::str_extract(sd_s$datetime, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
+sd_s$time <- replace_na(sd_s$time, "00:00:00")
 
 # 3. Get permutation realizations -----------------------------------------
 n <- 100
+sm <- 5 # can shift 5 days in either direction, 10 day range total
 # CONVEYOR
 ## Conveyor: NON-SOCIABLE
 realizations_conveyor_ns <- vector(mode = "list", length = n)
 for(i in 1:n){
-  realizations_conveyor_ns[[i]] <- rotate_data_table(data = sd_ns, idCol = "indiv", dateCol = "datetime")
+  cat(".")
+  realizations_conveyor_ns[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
-realizations_conveyor_ns <- map(realizations_conveyor_ns, as.data.frame) # turn back to data frame
 
 ## Conveor: SOCIABLE
 realizations_conveyor_s <- vector(mode = "list", length = n)
 for(i in 1:n){
-  realizations_conveyor_s[[i]] <- rotate_data_table(data = sd_s, idCol = "indiv", dateCol = "datetime")
+  cat(".")
+  realizations_conveyor_s[[i]] <- rotate_data_table(dataset = sd_s, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
-realizations_conveyor_s <- map(realizations_conveyor_s, as.data.frame) # turn back to data frame
 
 # RANDOM
 ## Random: NON-SOCIABLE
 data.table::setDT(sd_ns)
 sd_ns$datetime <- as.POSIXct(sd_ns$datetime)
-realizations_random_ns <- randomizations(DT = sd_ns, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n) %>%
-  filter(iteration != 0) %>% as.data.frame() # remove the original, since the original is `simulation_data`
-realizations_random_ns <- realizations_random_ns %>%
-  group_split(iteration, .keep = TRUE)
+realizations_random_ns <- as.data.frame(randomizations(DT = sd_ns, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n)) %>%
+  filter(iteration != 0) %>% group_split(iteration, .keep = TRUE)
 
 ## Random: SOCIABLE
 data.table::setDT(sd_s)
 sd_s$datetime <- as.POSIXct(sd_s$datetime)
-realizations_random_s <- randomizations(DT = sd_s, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n) %>%
-  filter(iteration != 0) %>% as.data.frame() # remove the original, since the original is `simulation_data`
-realizations_random_s <- realizations_random_s %>%
-  group_split(iteration, .keep = TRUE)
+realizations_random_s <- as.data.frame(randomizations(DT = sd_s, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n)) %>%
+  filter(iteration != 0) %>% group_split(iteration, .keep = TRUE)
 
 # 4. Get stats ------------------------------------------------------------
 # NON-SOCIABLE
 obs_stats_ns <- get_stats(data = sd_ns, edgelist = get_edgelist(data = sd_ns, idCol = "indiv", dateCol = "datetime"))
-conv_edges_ns <- map(realizations_conveyor_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime"))
+conv_edges_ns <- map(realizations_conveyor_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_ns <- map2(.x = realizations_conveyor_ns, .y = conv_edges_ns, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 rand_edges_ns <- map(realizations_random_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
@@ -75,7 +84,7 @@ perms_stats_ns <- conv_stats_ns %>% mutate(type = "conveyor") %>% bind_rows(rand
 
 # SOCIABLE
 obs_stats_s <- get_stats(data = sd_s, edgelist = get_edgelist(data = sd_s, idCol = "indiv", dateCol = "datetime"))
-conv_edges_s <- map(realizations_conveyor_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "datetime"))
+conv_edges_s <- map(realizations_conveyor_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_s <- map2(.x = realizations_conveyor_s, .y = conv_edges_s, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 rand_edges_s <- map(realizations_random_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
@@ -169,4 +178,4 @@ perm_mns %>%
   ylab("")+ xlab("Mean strength") # huh, interesting, not as much differentiation here! Conveyor gives a wider range of values than random, and the distribution might be a bit different too (skewed vs. normal)
 
 # Next figure: x axis = level of sociability. y axis = [obs-random delta], col = permutation type, only sociable. Facets: degree/strength
-# For this to work, we need to do permutations with different levels of sociability. I think this is controlled by kappa. 
+# For this to work, we need to do permutations with different levels of sociability. I think this is controlled by EtaCRW (and also Kappa, but mostly EtaCRW) 
