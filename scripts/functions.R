@@ -71,12 +71,12 @@ simulateAgents <- function(N_indv = 6,
     
     # 2. Rose diagram of step directions
     CircStats::rose.diag(CircStats::rvm(n=10000, 
-                  mean = 0,
-                  k = Kappa_ind),
-              bins=72, 
-              pch = 16, 
-              cex = 1, 
-              shrink = 1)
+                                        mean = 0,
+                                        k = Kappa_ind),
+                         bins=72, 
+                         pch = 16, 
+                         cex = 1, 
+                         shrink = 1)
   }
   
   # Prepare variables for storing data --------------------------------------
@@ -296,41 +296,46 @@ get_edgelist <- function(data, idCol, dateCol){
   spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
-# 4. loop_days ------------------------------------------------------------
-# loops a single posix around min and max
-loop_days <- function(data, min, max, shift){
-  # shift <- lubridate::days(shift)
-  shift <- 24 * 60 * 60 * shift
-  shifted <- data + shift
-  shifted <- ifelse(shifted > max, min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours"), shifted)
-  # if(shifted > max)
-  #   shifted <- min + shift - difftime(max, data, units="days") - difftime(ceiling_date(max, unit="day"), max, units="hours")
-  shifted
-}
-
-# 5. rotate_data_table ----------------------------------------------------
-rotate_data_table <- function(data, idCol, dateCol, shiftMax=NULL){
-  ## SET SEED
-  # set.seed(2023)
-  data_table <- data.frame(data)
-  data_table <- data.table::setDT(data_table)
-  if(is.null(shift)){
-    data_table[, c("mindate", "maxdate", "sampledShift") := list(min(get(dateCol)),
-                                                                 max(get(dateCol)),
-                                                                 sample(1:floor(difftime(max(get(dateCol)),
-                                                                                         min(get(dateCol)), units="days") - 1),
-                                                                        1)),
-               by = get(idCol)]
-  } else {
-    data_table[, sampledshift := sample(1:shiftMax), by = get(idCol)]
+# 5 rotate_data_table ------------------------------------------------------------
+# Note: this no longer actually takes a data_table, just keeping the name for consistency with previous.
+# Unlike the previous function, this one requires that you separate the dates and times into separate columns beforehand.
+rotate_data_table <- function(dataset, shiftMax, idCol = "indiv", dateCol = "date", timeCol = "time"){
+  indivList <- dataset %>%
+    group_by(.data[[idCol]]) %>%
+    group_split(.keep = T)
+  joined <- vector(mode = "list", length = length(indivList))
+  for(indiv in 1:length(indivList)){
+    x <- indivList[[indiv]]
+    shift <- sample(-(shiftMax):shiftMax, size = 1)
+    #cat(shift, "\n")
+    # get all unique days that show up
+    days <- sort(unique(x[[dateCol]]))
+    
+    # get min and max dates to shift around (the "poles" of the conveyor)
+    selfMinDate <- min(days, na.rm = T)
+    selfMaxDate <- max(days, na.rm = T)
+    
+    # create a total sequence of dates to select from
+    daysFilled <- seq(lubridate::ymd(selfMinDate), lubridate::ymd(selfMaxDate), by = "day")
+    # converting to numbers so we can use %%--which dates are the ones we started with?
+    vec <- which(daysFilled %in% days)
+    shiftedvec <- vec + shift # shift
+    new <- (shiftedvec - min(vec)) %% (max(vec)-min(vec)+1)+1 # new dates as numbers
+    shiftedDates <- daysFilled[new] # select those dates from the possibilities
+    
+    # Make a data frame to hold the old and new dates
+    daysDF <- bind_cols({{dateCol}} := days, 
+                        "newDate" = shiftedDates,
+                        shift = shift)
+    nw <- left_join(x, daysDF, by = dateCol)
+    
+    if(!is.null(timeCol)){
+      nw$newdatetime <- lubridate::ymd_hms(paste(nw$newDate, nw[[timeCol]]))
+    }
+    joined[[indiv]] <- nw
   }
-  
-  
-  # loop_days <- Vectorize(loop_days)
-  # data_table[, eval(dateCol) := as.POSIXct(mapply(function(w, x, y, z) loop_days(w, x, y, z), get(dateCol), mindate, maxdate, sampledShift))]
-  data_table[, eval(dateCol) := as.POSIXct(loop_days(get(dateCol), mindate, maxdate, sampledShift))]
-  data_table[, -c("mindate", "maxdate", "sampledShift")]
-  data_table
+  out <- purrr::list_rbind(joined)
+  return(out)
 }
 
 # 6. get_stats ------------------------------------------------------------
@@ -344,7 +349,7 @@ get_stats <- function(edgelist, data){
     dplyr::summarise(degree = n_distinct(ID2), .groups = "drop")
   
   sri_per_edge <- calcSRI(dataset = data, edges = edgelist, idCol = "indiv", timegroupCol = "timegroup")
-
+  
   mean_sri_and_strength <- sri_per_edge %>%
     dplyr::group_by(ID1) %>%
     dplyr::summarise(mean_sri = mean(sri),
