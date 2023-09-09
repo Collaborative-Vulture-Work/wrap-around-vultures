@@ -55,7 +55,8 @@ simulateAgents <- function(N_indv = 6,
                            StpStd_ind = 5,
                            Kappa_ind = 3,
                            ToPlot = 1,
-                           quiet = F){
+                           quiet = F,
+                           HRChangeRadius = 0){
   
   # Set the seed, if one is provided ----------------------------------------
   if(!is.null(seed)){
@@ -181,9 +182,23 @@ simulateAgents <- function(N_indv = 6,
     } # Plot the line
   } # End loop on individuals 
   
+  HRCntPerDay <- list()
+  HRCntPerDay[[1]] <- HRCnt
+  dayCount <- 1
   
   #### loop on time steps and individuals to run the simulation ####
   for(Curr_tmStp in 1:(N_tmStp-1)){
+    ## change HRCnt per day ##
+    if(HRChangeRadius > 0 && Curr_tmStp %% DayLength == 0){
+      dayCount <- dayCount + 1
+      randomAngles <- runif(N_indv, min=0, 2 * pi)
+      randomLengths <- sqrt(HRChangeRadius) * sqrt(runif(N_indv))
+      randomX <- randomLengths * cos(randomAngles)
+      randomY <- randomLengths * sin(randomAngles)
+      randomXY <- cbind(randomX, randomY)
+      HRCntPerDay[[dayCount]] <- HRCntPerDay[[dayCount-1]]
+      HRCntPerDay[[dayCount]][, 1:2] <- HRCntPerDay[[dayCount]][, 1:2] + randomXY
+    }
     ## loop on individuals ##
     for(Curr_indv in 1:N_indv){
       
@@ -199,7 +214,13 @@ simulateAgents <- function(N_indv = 6,
       
       ##### selecting direction ##########
       # Calculating the direction to the initial location (bias point )+ now with drift for the current step
-      BiasPoint <- (XYind[[Curr_indv]][1, ] + CurDrift*DriftingYorN[Curr_indv]) # This bias point is the origin+ the current cumulative bias
+      # BiasPoint <- (XYind[[Curr_indv]][1, ] + CurDrift*DriftingYorN[Curr_indv]) # This bias point is the origin+ the current cumulative bias
+      # sampling bias points per day
+      if(HRChangeRadius > 0)
+        BiasPoint <- HRCntPerDay[[dayCount]][Curr_indv, 1:2]
+      else
+        BiasPoint <- HRCntPerDay[[1]][Curr_indv, 1:2]
+      
       if((PairedAgents==1) & (Curr_indv %% 2 == 1)){
         BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv+1]][Curr_tmStp, ]))
       } # Updating bias point as the mean of HR center and mate's last location
@@ -261,7 +282,9 @@ simulateAgents <- function(N_indv = 6,
   # Create a list for output with three slots: hr centers, and xy coordinates
   rName <- paste("sim", N_tmStp, N_indv, 100*EtaCRW, StpSize_ind, DriftHRCenters, ".rdata", sep = "_")
   matlabName <- "xyFromSimulationForSNanalysis.mat" # keeping the old format for compatibility with Orr's old code
-  out <- list("rName" = rName, "matlabName" = matlabName, "HRCntXY" = HRCnt, "XY" = XYind_log2)
+  ## NOTE ## 
+  # HRCntXY usually returns HRCnt not HRCntPerDay
+  out <- list("rName" = rName, "matlabName" = matlabName, "HRCntXY" = HRCntPerDay, "XY" = XYind_log2)
   return(out)
 }
 
