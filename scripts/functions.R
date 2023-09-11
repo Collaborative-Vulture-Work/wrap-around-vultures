@@ -38,6 +38,14 @@ Color_indv=c(3,5,6,7,8,2,3,5,6,7,8,2)#if ToPlot=01 this determines how many indi
 # StpStd_ind <- 5 # Standard deviations of step lengths of individuals
 # Kappa_ind <- 3  # Concentration parameters of von Mises directional distributions used for individuals' movement
 
+# New simulation Parameters
+
+# HRChangeRadius <- 0 # Radius in which new HR center is to be selected from the next day
+# PairedHRMovement = 0 # Simulates BCRW with HR centers
+# HREtaCRW = 0.7 # parameters for HR BCRW
+# HRKappa_ind = 1 # controls how strongly vm distribution is centered on mu
+# HR_Social_Dist = 1000 # distance to bias toward another HR (soon to be removed)
+
 simulateAgents <- function(N_indv = 6,
                            DaysToSimulate = 10, 
                            DayLength = 50, 
@@ -56,7 +64,11 @@ simulateAgents <- function(N_indv = 6,
                            Kappa_ind = 3,
                            ToPlot = 1,
                            quiet = F,
-                           HRChangeRadius = 0){
+                           HRChangeRadius = 0,
+                           PairedHRMovement = 0,
+                           HREtaCRW = 0.7,
+                           HRKappa_ind = 1,
+                           HR_Social_Dist = 1000){
   
   # Set the seed, if one is provided ----------------------------------------
   if(!is.null(seed)){
@@ -182,22 +194,33 @@ simulateAgents <- function(N_indv = 6,
     } # Plot the line
   } # End loop on individuals 
   
-  HRCntPerDay <- list()
-  HRCntPerDay[[1]] <- HRCnt
-  dayCount <- 1
+  if(HRChangeRadius > 0){
+    HRCntPerDay <- list()
+    HRCntPerDay[[1]] <- HRCnt # set initial HR centers
+    dayCount <- 1
+  }
+  
+  if(PairedHRMovement > 0){
+    HRPerTimestep <- list()
+    HRPhi_ind <- rep(0, N_indv) # Direction of the last step for the HRs
+    for (k in 1:N_indv){
+      HRPerTimestep[[k]] <- matrix(rep(NA, 2 * N_tmStp), ncol = 2)
+      HRPerTimestep[[k]][1, ] <- HRCnt[k, 1:2] # set initial HR centers
+    }
+  }
   
   #### loop on time steps and individuals to run the simulation ####
   for(Curr_tmStp in 1:(N_tmStp-1)){
     ## change HRCnt per day ##
-    if(HRChangeRadius > 0 && Curr_tmStp %% DayLength == 0){
+    if(HRChangeRadius > 0 && Curr_tmStp %% DayLength == 0){ ## && and %% are for scalars not vectors, change every day
       dayCount <- dayCount + 1
-      randomAngles <- runif(N_indv, min=0, 2 * pi)
-      randomLengths <- sqrt(HRChangeRadius) * sqrt(runif(N_indv))
+      randomAngles <- runif(N_indv, min=0, 2 * pi) # sample angle from 0-2pi per individual
+      randomLengths <- HRChangeRadius * sqrt(runif(N_indv)) # https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly #
       randomX <- randomLengths * cos(randomAngles)
       randomY <- randomLengths * sin(randomAngles)
-      randomXY <- cbind(randomX, randomY)
+      randomXY <- cbind(randomX, randomY) # get random XY to add to existing HR to move
       HRCntPerDay[[dayCount]] <- HRCntPerDay[[dayCount-1]]
-      HRCntPerDay[[dayCount]][, 1:2] <- HRCntPerDay[[dayCount]][, 1:2] + randomXY
+      HRCntPerDay[[dayCount]][, 1:2] <- HRCntPerDay[[dayCount]][, 1:2] + randomXY # move HR centers
     }
     ## loop on individuals ##
     for(Curr_indv in 1:N_indv){
@@ -210,16 +233,29 @@ simulateAgents <- function(N_indv = 6,
       }
       Dist[Dist==0] <- NA # Getting rid of the distance to self
       
+      if(PairedHRMovement > 0){
+      ## distance to other HR centers ## 
+        
+        HRDist <- rep(NA,N_indv ) 
+        for(ii in 1:N_indv){
+          HRDist[ii] <- stats::dist(rbind(HRPerTimestep[[ii]][Curr_tmStp, ],
+                                        c(HRPerTimestep[[Curr_indv]][Curr_tmStp, ])))
+        }
+        HRDist[Dist==0] <- NA # Getting rid of the distance to self
+      }
       ## start generation of indiv location at time k+1
       
       ##### selecting direction ##########
       # Calculating the direction to the initial location (bias point )+ now with drift for the current step
-      # BiasPoint <- (XYind[[Curr_indv]][1, ] + CurDrift*DriftingYorN[Curr_indv]) # This bias point is the origin+ the current cumulative bias
-      # sampling bias points per day
+      
+      # Sampling bias points depending on method
       if(HRChangeRadius > 0)
-        BiasPoint <- HRCntPerDay[[dayCount]][Curr_indv, 1:2]
+        BiasPoint <- HRCntPerDay[[dayCount]][Curr_indv, 1:2] # if HR changes per day, sample by day
+      else if(PairedHRMovement > 0)
+        BiasPoint <- HRPerTimestep[[Curr_indv]][Curr_tmStp, ] # if HR changes by timestep, sample by timestep (soon to be removed)
       else
-        BiasPoint <- HRCntPerDay[[1]][Curr_indv, 1:2]
+        BiasPoint <- (XYind[[Curr_indv]][1, ] + CurDrift*DriftingYorN[Curr_indv]) # This bias point is the origin+ the current cumulative bias
+        # BiasPoint <- HRCntPerDay[[1]][Curr_indv, 1:2] above is the original code, though this might work
       
       if((PairedAgents==1) & (Curr_indv %% 2 == 1)){
         BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv+1]][Curr_tmStp, ]))
@@ -252,6 +288,27 @@ simulateAgents <- function(N_indv = 6,
                            Im(exp((0+1i) * Phi_ind[Curr_indv])))
       XYind[[Curr_indv]][Curr_tmStp + 1, ] <- XYind[[Curr_indv]][Curr_tmStp, ] + step # The indiv's next location
       
+      # Move HR according to vm (soon to be removed) #
+      
+      if(PairedHRMovement > 0){
+        if(min(HRDist, na.rm=T) < HR_Social_Dist)
+          HRBiasPoint <- HRPerTimestep[[which.min(HRDist)]][Curr_tmStp, ] # bias to closest HR in range
+        else
+          HRBiasPoint <- HRPerTimestep[[Curr_indv]][1, ] # otherwise bias to original HR position
+        HRcoo <- HRBiasPoint - HRPerTimestep[[Curr_indv]][Curr_tmStp, ] # get direction from HR current position to bias
+        HRmu <- Arg(coo[1] + (0+1i) * coo[2])
+        if(HRmu < 0){
+          HRmu <- HRmu + 2 * pi  
+        } 
+        HRmu.av <- Arg(HREtaCRW * exp(HRPhi_ind[Curr_indv] * (0+1i)) + (1 - HREtaCRW) * exp(mu * (0+1i)))
+        HRPhi_ind[Curr_indv] <- CircStats::rvm(n=1, mean = mu.av, k = HRKappa_ind)
+        step.len <- stats::rgamma(1, shape = StpSize_ind^2/StpStd_ind^2,  # step sizes could be changed ?
+                                  scale = StpStd_ind^2/StpSize_ind)
+        step <- step.len * c(Re(exp((0+1i) * HRPhi_ind[Curr_indv])), 
+                             Im(exp((0+1i) * HRPhi_ind[Curr_indv])))
+        HRPerTimestep[[Curr_indv]][Curr_tmStp + 1, ] <- HRPerTimestep[[Curr_indv]][Curr_tmStp, ] + step
+      }
+      
       ###### ploting the steps ########
       if(Curr_indv <= length(Color_indv) & ToPlot==1 ){
         # Plot only up to 6 indiv and only if ToPlot==1
@@ -282,9 +339,16 @@ simulateAgents <- function(N_indv = 6,
   # Create a list for output with three slots: hr centers, and xy coordinates
   rName <- paste("sim", N_tmStp, N_indv, 100*EtaCRW, StpSize_ind, DriftHRCenters, ".rdata", sep = "_")
   matlabName <- "xyFromSimulationForSNanalysis.mat" # keeping the old format for compatibility with Orr's old code
-  ## NOTE ## 
-  # HRCntXY usually returns HRCnt not HRCntPerDay
-  out <- list("rName" = rName, "matlabName" = matlabName, "HRCntXY" = HRCntPerDay, "XY" = XYind_log2)
+ 
+  # determine which form of HR centers to return #
+  if(HRChangeRadius > 0)
+    HRReturn <- HRCntPerDay
+  else if(PairedHRMovement > 0)
+    HRReturn <- HRPerTimestep
+  else
+    HRReturn <- HRCntXY
+  
+  out <- list("rName" = rName, "matlabName" = matlabName, "HRCntXY" = HRReturn, "XY" = XYind_log2)
   return(out)
 }
 
