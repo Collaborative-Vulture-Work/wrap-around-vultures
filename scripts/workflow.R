@@ -18,6 +18,16 @@ library(spatsoc) # to implement the trajectory randomization method as described
 # Save R data:
 # save(sim_data_s, file = "data/sim_data_s.Rda")
 
+# tests for HR moving
+# HRS <- sim_data_ns$HRCntXY
+# HRS <- as.data.frame(do.call(rbind, Map(cbind, index = seq_along(HRS), HRS)))
+
+# HRS$indiv <- rep(1:5, 50)
+# p <- ggplot(HRS, aes(V2, V3, color = factor(indiv))) + geom_point()
+
+# HRS <- HRS %>% group_by(index) %>% mutate(day = 1:n())
+# p <- ggplot(HRS, aes(V2, V3, color = day)) + geom_point() + facet_wrap(~index) + scale_color_viridis_c()
+
 # 2. Load the simulated data and extract the xy coords --------------------
 load("data/sim_data_ns.Rda")
 sd_ns <- sim_data_ns$XY # extract just the XY coords
