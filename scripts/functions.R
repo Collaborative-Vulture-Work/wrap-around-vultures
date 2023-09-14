@@ -41,10 +41,9 @@ Color_indv=c(3,5,6,7,8,2,3,5,6,7,8,2)#if ToPlot=01 this determines how many indi
 # New simulation Parameters
 
 # HRChangeRadius <- 0 # Radius in which new HR center is to be selected from the next day
-# sim_3 = 0 # Simulates BCRW with HR centers
+# sim_3 = 0 # Simulates CRW with HR centers
 # HREtaCRW = 0.7 # parameters for HR BCRW
-# HRKappa_ind = 1 # controls how strongly vm distribution is centered on mu
-# HR_Social_Dist = 1000 # distance to bias toward another HR (soon to be removed)
+# HRKappa_ind = 3 # controls how strongly vm distribution is centered on mu
 
 simulateAgents <- function(N_indv = 6,
                            DaysToSimulate = 10, 
@@ -68,7 +67,6 @@ simulateAgents <- function(N_indv = 6,
                            sim_3 = 0,
                            HREtaCRW = 0.7,
                            HRKappa_ind = 1,
-                           HR_Social_Dist = 1000,
                            HRStpSize = 200,
                            HRStpStd = 50,
                            sameStartingAngle = 0){
