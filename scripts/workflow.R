@@ -19,7 +19,7 @@ library(spatsoc) # to implement the trajectory randomization method as described
 # save(sim_data_s, file = "data/sim_data_s.Rda")
 
 # tests for HR moving
-sim_data_ns <- simulateAgents(N_indv = 5, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0, HRChangeRadius = 200, PairedHRMovement = 1, daysBeforeHRMovement = 1, HRKappa_ind = 3, sameStartingAngle = 1)
+sim_data_ns <- simulateAgents(N_indv = 5, DaysToSimulate = 50, Kappa_ind = 1, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0, HRChangeRadius = 200, PairedHRMovement = 1, daysBeforeHRMovement = 1, HRKappa_ind = 8, sameStartingAngle = 1)
 HRS <- sim_data_ns$HRCntXY
 HRS <- as.data.frame(do.call(rbind, Map(cbind, indiv = seq_along(HRS), HRS)))
 colnames(HRS)[2:3] <- c("x", "y")
@@ -32,7 +32,7 @@ XY <- sim_data_ns$XY[, c('indiv', 'x', 'y')]
 
 p <- ggplot(HRS, aes(x, y, color = day)) + geom_point() + facet_wrap(~indiv) + scale_color_viridis_c()
 pp <- ggplot(XY, aes(x, y)) + geom_point() + facet_wrap(~indiv) + scale_color_viridis_c()
-ppp <- ggplot(NULL, aes(x, y)) + geom_point(data=HRS, color = 'darkred', alpha=0.1) + geom_point(data=XY, color='darkblue')+ facet_wrap(~indiv)
+ppp <- ggplot(NULL, aes(x, y)) + geom_point(data=HRS, color = 'red', alpha=0.1) + geom_point(data=XY, color='blue')+ facet_wrap(~indiv)
 # 2. Load the simulated data and extract the xy coords --------------------
 load("data/sim_data_ns.Rda")
 sd_ns <- sim_data_ns$XY # extract just the XY coords
