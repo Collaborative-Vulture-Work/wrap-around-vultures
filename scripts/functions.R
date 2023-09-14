@@ -308,7 +308,7 @@ simulateAgents <- function(N_indv = 6,
         mu <- HRPerTimestep[[Curr_indv]][Curr_tmStp, 3]
         
         HRmu.av <- Arg(HREtaCRW * exp(HRPhi_ind[Curr_indv] * (0+1i)) + (1 - HREtaCRW) * exp(mu * (0+1i)))
-        HRPhi_ind[Curr_indv] <- CircStats::rvm(n=1, mean = mu.av, k = HRKappa_ind)
+        HRPhi_ind[Curr_indv] <- CircStats::rvm(n=1, mean = HRmu.av, k = HRKappa_ind)
         step.len <- stats::rgamma(1, shape = StpSize_ind^2/StpStd_ind^2,  # step sizes could be changed ?
                                   scale = StpStd_ind^2/StpSize_ind)
         step <- step.len * c(Re(exp((0+1i) * HRPhi_ind[Curr_indv])), 
