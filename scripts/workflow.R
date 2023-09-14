@@ -19,18 +19,18 @@ library(spatsoc) # to implement the trajectory randomization method as described
 # save(sim_data_s, file = "data/sim_data_s.Rda")
 
 # tests for HR moving
-sim_data_ns <- simulateAgents(N_indv = 5, DaysToSimulate = 50, Kappa_ind = 1, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0, sim_3 = 1, HRKappa_ind = 4, sameStartingAngle = 0)
+sim_data_ns <- simulateAgents(N_indv = 5, DaysToSimulate = 50, Kappa_ind = 1, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0, sim_3 = 1, HRKappa_ind = 4, sameStartingAngle = 1)
 HRS <- sim_data_ns$HRCntXY
-HRS <- as.data.frame(do.call(rbind, HRS))
+HRS <- as.data.frame(do.call(rbind, Map(cbind, HRS, Day = seq_along(HRS))))
 colnames(HRS)[1:3] <- c("x", "y", "mu")
 
 HRS$indiv <- rep(1:5, 50)
-p <- ggplot(HRS, aes(x, y, color = factor(indiv))) + geom_point()
+p <- ggplot(HRS, aes(x, y, color = Day)) + geom_point() + facet_wrap(~indiv) + scale_color_viridis_c()
 
-XY <- sim_data_ns$XY[, c('indiv', 'x', 'y')]
-pp <- ggplot(XY, aes(x, y)) + geom_point()+ scale_color_viridis_c()
+XY <- sim_data_ns$XY[, c('indiv', 'x', 'y', 'Day')]
+pp <- ggplot(XY, aes(x, y, color = Day)) + geom_point() + facet_wrap(~indiv) + scale_color_viridis_c()
 
-ppp <- ggplot(NULL, aes(x, y, color = factor(indiv))) + geom_point(data=HRS) + geom_point(data=XY)
+ppp <- ggplot(NULL, aes(x, y, color = Day)) + geom_point(data=HRS) + geom_point(data=XY) + facet_wrap(~indiv) + scale_color_viridis_c()
 
 # 2. Load the simulated data and extract the xy coords --------------------
 load("data/sim_data_ns.Rda")
