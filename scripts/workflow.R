@@ -19,7 +19,7 @@ library(spatsoc) # to implement the trajectory randomization method as described
 # save(sim_data_s, file = "data/sim_data_s.Rda")
 
 # tests for HR moving
-sim_data_ns <- simulateAgents(N_indv = 5, DaysToSimulate = 50, Kappa_ind = 1, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0, sim_3 = 1, HRKappa_ind = 4, sameStartingAngle = 1)
+sim_data_ns <- simulateAgents(N_indv = 5, DaysToSimulate = 50, Kappa_ind = 1, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0, sim_3 = 1, HRKappa_ind = 4, HREtaCRW = 0.7, HRKappa_ind = 1, HRStpSize = 200, HRStpStd = 50, sameStartingAngle = 1)
 HRS <- sim_data_ns$HRCntXY
 HRS <- as.data.frame(do.call(rbind, Map(cbind, HRS, Day = seq_along(HRS))))
 colnames(HRS)[1:3] <- c("x", "y", "mu")
