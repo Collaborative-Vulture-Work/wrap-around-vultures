@@ -24,10 +24,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            Days = 10, # Number of days to simulate
                            DayLength = 50, # Number of time steps per day (currently it is limited to 59 since i considered it as minutes within an hour)
                            Soc_Percep_Rng = 2000, #detection range (in meters) - indivduals within this range will be considered in the bias point in the relevan scenario of sociable agents. set to 0 if you want socially indiferent agents (or in the fixed pairs scenario) 
-                           DriftHRCenters = 0, # 1 or 0 for a drift of the center in space along the simulation (i.e. the changing environment scenarios), 0 is no drift.
-                           DriftStrength = c(1,0), # If DriftHRCenters==1 this defines drift in m per day for X and Y values in the simulation 
-                           DriftasOnce = 2, # If DriftHRCenters==1 this defines when does the drift occur. can be 0,1,2. if 0 it will drift daily; if 1 it will drift in the midle of the run if 2 it will drift from begining. 
-                           PropDriftIndiv = 1, # Proportion of drifting individuals.
                            PairedAgents = 0, # If 1 then simulates the paired agent scenario where agents are paired in their intial location and show attraction to their pair only, indiferent to the others.
                            PairStartDist = 200, # If PairedAgents=1 this sets the Upper limit of the distance of the pairs. For the second individual in each pair the location will be random within this range from the first mate. 
                            Scl = 2000,
@@ -44,6 +40,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            HRKappa_ind = 1, # controls how strongly vm distribution is centered on mu
                            HRStpSize = 200,
                            HRStpStd = 50,
+                           socialWeight = 0.5, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
                            sameStartingAngle = 0
 ){
   
@@ -73,20 +70,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   if(PairedAgents==1){ # If paired design, then no social perception range for other agents
     Soc_Percep_Rng <- 0
   } 
-  # Calculate dimensions: time steps, rows
+  # Calculate number of time steps
   N_timesteps <- Days*DayLength # Total number of time steps that will be simulated for each iteration
-  N_Rows <- N*N_timesteps
-  
-  # Create data frame that will store the coordinates of each individual at each timestep
-  XYind_log2 <- data.frame(
-    indiv = as.factor(rep(seq(1:N), length.out = N_Rows, each = N_timesteps)),
-    step = rep(seq(1:N_timesteps), length.out = N_Rows),
-    Day = rep(seq(1:Days), length.out = N_Rows, each = DayLength),
-    StepInDay = rep(seq(1:DayLength), length.out = N_Rows, each = 1),
-    burst = as.factor(rep(seq(1:(Days*N)), 
-                          length.out = N_Rows, each = DayLength)),
-    x = NA, y = NA, pseudoSex = NA
-  )
   
   # 4. Set starting conditions -------------------------------------------------
   startIndx <- 1
@@ -180,9 +165,9 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       # Calculating the direction to the initial location (bias point )+ now with drift for the current step
       # Set individual bias points in different ways depending on method
       if(HRChangeRadius > 0 || sim_3 > 0){
-        BiasPoint <- HRCentPerDay[[dayCount]][Curr_indv, 1:2] # if HR changes per day, sample by day
+        BiasPoint <- HRCentPerDay[[dayCount]][Curr_indv, 1:2] # if HR changes per day, set bias point to that day's home range
       }else{
-        BiasPoint <- XYind[[Curr_indv]][1, ]
+        BiasPoint <- HRCentPerDay[[1]][Curr_indv, 1:2] # otherwise, bias toward the original home range center
       }
       
       if((PairedAgents == 1) & (Curr_indv %% 2 == 1)){
@@ -196,10 +181,11 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       
       # If another individual is within social perception range...
       if(min(Dist, na.rm = T) < Soc_Percep_Rng){
-        # if i want the mean of direction to the HR and nearest neighbor: 
-        # BiasPoint <- colMeans(rbind(BiasPoint, XYind[[which.min(Dist)]][Curr_timestep, ]))} # Then updated  this for the bias also
-        # Then bias toward that other individual.
-        BiasPoint <- XYind[[which.min(Dist)]][Curr_timestep, ]
+        if(socialWeight < 0 | socialWeight >1){stop("socialWeight must be a number between 0 and 1.")}
+        # Take the mean between the home range center and the closest other individual's location, and bias towards that mean
+        otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
+        meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*BiasPoint)/2
+        BiasPoint <- meanpoint
       }
       
       # Set direction to the chosen bias point
@@ -238,17 +224,36 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   } # End loop on time steps
   
   # Create a list for output with three slots: hr centers, and xy coordinates
-  rName <- paste("sim", N_timesteps, N, 100*EtaCRW, StpSize_ind, DriftHRCenters, ".rdata", sep = "_")
+  rName <- paste("sim", N_timesteps, N, 100*EtaCRW, StpSize_ind, ".rdata", sep = "_")
   matlabName <- "xyFromSimulationForSNanalysis.mat" # keeping the old format for compatibility with Orr's old code
   
   # determine which form of HR centers to return #
+  # Reformat HR centers to be per individual instead of per day
+  HRCentPerIndiv <- vector(mode = "list", length = N)
+  for(i in 1:N){
+    out <- as.data.frame(do.call(rbind, map(HRCentPerDay, ~.x[i,])))
+    names(out) <- c("X", "Y", "angle")
+    out$day <- 1:nrow(out)
+    HRCentPerIndiv[[i]] <- out
+  } 
+  HRCentPerIndiv <- HRCentPerIndiv %>% purrr::list_rbind(names_to = "indiv")
   if(HRChangeRadius > 0 || sim_3 > 0){
-    HRReturn <- HRCentPerDay
+    HRReturn <- HRCentPerIndiv
   }
   else{
     HRReturn <- HRCent
   }
-  out <- list("rName" = rName, "matlabName" = matlabName, "HRCent" = HRReturn, "XY" = XYind_log2)
+  
+  # Reformat XYind as a data frame
+  XYind <- map(XYind, ~{
+    .x <- as.data.frame(.x)
+    .x$timestep = 1:nrow(.x)
+    .x$day = rep(1:Days, each = DayLength)
+    return(.x)
+  }) %>% purrr::list_rbind(names_to = "indiv")
+  names(XYind)[names(XYind) == "V1"] <- "X"
+  names(XYind)[names(XYind) == "V2"] <- "Y"
+  out <- list("rName" = rName, "matlabName" = matlabName, "HRCent" = HRReturn, "XY" = XYind)
   return(out)
 }
 
