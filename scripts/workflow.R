@@ -6,27 +6,22 @@ library(spatsoc) # to implement the trajectory randomization method as described
 
 # 1. Run the simulation to obtain simulated data --------------------------
 # NON-SOCIABLE
-sim_data_ns <- simulateAgents(N_indv = 10, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
-# str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
+sim_data_ns <- simulateAgents(N = 30, Days = 25, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0)
+str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
-# save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
+save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
 # Save Matlab data: (note: this can take a really long time!)
 # R.matlab::writeMat(con = paste0("data/", sim_data_ns$matlabName), XY = sim_data_ns$XY, HRCntXY = sim_data_ns$HRCntXY)
 
 # SOCIABLE
-# sim_data_s <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 2000)
+sim_data_s <- simulateAgents(N = 30, Days = 25, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0, socialWeight = 0.5)
 # Save R data:
-# save(sim_data_s, file = "data/sim_data_s.Rda")
+save(sim_data_s, file = "data/sim_data_s.Rda")
 
 # tests for HR moving
-# HRS <- sim_data_ns$HRCntXY
-# HRS <- as.data.frame(do.call(rbind, Map(cbind, index = seq_along(HRS), HRS)))
-
-# HRS$indiv <- rep(1:5, 50)
-# p <- ggplot(HRS, aes(V2, V3, color = factor(indiv))) + geom_point()
-
-# HRS <- HRS %>% group_by(index) %>% mutate(day = 1:n())
-# p <- ggplot(HRS, aes(V2, V3, color = day)) + geom_point() + facet_wrap(~index) + scale_color_viridis_c()
+test <- simulateAgents(N = 5, Days = 6, DayLength = 50, Soc_Percep_Rng = 2000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind = 7, StpStd_ind = 5, Kappa_ind = 3, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0, HRStpSize = 1000, HRStpStd = 100)
+test$XY %>% ggplot(aes(x = X, y = Y, col = factor(day)))+geom_point()+geom_point(data = test$HRCent, pch = 4)+facet_wrap(~indiv, scales = "free")+theme_minimal()
+# Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
 
 # 2. Load the simulated data and extract the xy coords --------------------
 load("data/sim_data_ns.Rda")
@@ -60,7 +55,7 @@ for(i in 1:n){
   realizations_conveyor_ns[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
-## Conveor: SOCIABLE
+## Conveyor: SOCIABLE
 realizations_conveyor_s <- vector(mode = "list", length = n)
 for(i in 1:n){
   cat(".")
@@ -71,13 +66,13 @@ for(i in 1:n){
 ## Random: NON-SOCIABLE
 data.table::setDT(sd_ns)
 sd_ns$datetime <- as.POSIXct(sd_ns$datetime)
-realizations_random_ns <- as.data.frame(randomizations(DT = sd_ns, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n)) %>%
+realizations_random_ns <- as.data.frame(randomizations(DT = sd_ns, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("X", "Y"), iterations = n)) %>%
   filter(iteration != 0) %>% group_split(iteration, .keep = TRUE)
 
 ## Random: SOCIABLE
 data.table::setDT(sd_s)
 sd_s$datetime <- as.POSIXct(sd_s$datetime)
-realizations_random_s <- as.data.frame(randomizations(DT = sd_s, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n)) %>%
+realizations_random_s <- as.data.frame(randomizations(DT = sd_s, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("X", "Y"), iterations = n)) %>%
   filter(iteration != 0) %>% group_split(iteration, .keep = TRUE)
 
 # 4. Get stats ------------------------------------------------------------
