@@ -94,42 +94,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   HRCent[,3] <- rep(c(1,2), length.out = nrow(HRCent)) # Assign sex 
   HRcenterDist <- rep(0, N/2) # Initial distance between pairs of agents
   
-  # 5. Set drift of HR center (bias point) for drifting scenarios -----------
-  # if (DriftasOnce == 0){ # 0 it will drift daily;
-  #   Xdrift <- cumsum(rep(c(DriftStrength[1], rep(0, (DayLength-1))), Days)) # For each day i have the drift, then steps with no drift until the next day. I work with Cumsum since the drift grows 
-  #   Ydrift <- cumsum(rep(c(DriftStrength[2], rep(0, (DayLength-1))), Days)) 
-  #   print('using drift daily')
-  # } else if (DriftasOnce == 1){ # if 1 it will drift in the middle of the run  
-  #   Xdrift <- rep(0, N_timesteps)
-  #   Xdrift[N_timesteps/2] <- DriftStrength[1]*Days
-  #   Xdrift <- cumsum(Xdrift)
-  #   Ydrift <- rep(0,N_timesteps)
-  #   Ydrift[N_timesteps/2] <- DriftStrength[2]*Days
-  #   Ydrift <- cumsum(Ydrift) 
-  #   print('using drift from middle step of the run')
-  # } else if (DriftasOnce == 2){ #if 2 it will drift from beginning.
-  #   Xdrift <- rep(DriftStrength[1]*Days,N_timesteps)
-  #   Ydrift <- rep(DriftStrength[2]*Days,N_timesteps)
-  #   print('using drift from start')
-  # }else{
-  #   print('check your params')
-  # }
-  # 
-  # DrifByStep <- rbind(Xdrift, Ydrift)
-  # 
-  # # Determining individuals to drift.
-  # DriftingYorN <- c(rep(1, PropDriftIndiv*N),
-  #                   rep(-1, N-PropDriftIndiv*N))
-  # DriftingYorN <- sample(DriftingYorN, N)
-  # 
-  # # Setting the HR centerDrift for this time step (cumulative from beginning)
-  # if(DriftHRCenters==1){
-  #   CurDrift <- DrifByStep[,Curr_timestep]
-  #   names(CurDrift) <- NULL
-  # }else{
-  #   CurDrift <- c(0,0)
-  # }
-  
   # 6. Set initial conditions for individuals ----------------------------------
   # Loop on individuals: set initial conditions
   for (k in 1:N) {
@@ -213,18 +177,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                                       c(XYind[[Curr_indv]][Curr_timestep,])))
       }
       Dist[Dist == 0] <- NA # Remove distance to self
-      
-      # if(PairedHRMovement > 0){
-      # ## distance to other HR centers ## 
-      #   
-      #   HRDist <- rep(NA,N ) 
-      #   for(ii in 1:N){
-      #     HRDist[ii] <- stats::dist(rbind(HRPerTimestep[[ii]][Curr_timestep, ],
-      #                                   c(HRPerTimestep[[Curr_indv]][Curr_timestep, ])))
-      #   }
-      #   HRDist[Dist==0] <- NA # Getting rid of the distance to self
-      # }
-      ## start generation of indiv location at time k+1
+
       
       ##### selecting direction ##########
       # Calculating the direction to the initial location (bias point )+ now with drift for the current step
