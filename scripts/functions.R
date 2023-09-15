@@ -108,7 +108,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     if(sim_3 > 0){
       if (sameStartingAngle > 0){        # set same starting angle
         angle <- runif(1, min=0, 2 * pi)
-        HRCntPerDay[[1]][, 3] <- angle
+        HRCentPerDay[[1]][, 3] <- angle
       }
       else # set different starting angles
         HRCentPerDay[[1]][, 3] <- runif(N, min=0, 2 * pi)
@@ -167,7 +167,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       if(HRChangeRadius > 0 || sim_3 > 0){
         BiasPoint <- HRCentPerDay[[dayCount]][Curr_indv, 1:2] # if HR changes per day, set bias point to that day's home range
       }else{
-        BiasPoint <- HRCentPerDay[[1]][Curr_indv, 1:2] # otherwise, bias toward the original home range center
+        BiasPoint <- (XYind[[Curr_indv]][1, ]) # otherwise, bias toward the original home range center
       }
       
       if((PairedAgents == 1) & (Curr_indv %% 2 == 1)){
@@ -229,15 +229,16 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   
   # determine which form of HR centers to return #
   # Reformat HR centers to be per individual instead of per day
-  HRCentPerIndiv <- vector(mode = "list", length = N)
-  for(i in 1:N){
-    out <- as.data.frame(do.call(rbind, map(HRCentPerDay, ~.x[i,])))
-    names(out) <- c("X", "Y", "angle")
-    out$day <- 1:nrow(out)
-    HRCentPerIndiv[[i]] <- out
-  } 
-  HRCentPerIndiv <- HRCentPerIndiv %>% purrr::list_rbind(names_to = "indiv")
   if(HRChangeRadius > 0 || sim_3 > 0){
+    HRCentPerIndiv <- vector(mode = "list", length = N)
+    for(i in 1:N){
+      out <- as.data.frame(do.call(rbind, map(HRCentPerDay, ~.x[i,])))
+      names(out) <- c("X", "Y", "angle")
+      out$day <- 1:nrow(out)
+      HRCentPerIndiv[[i]] <- out
+    } 
+    HRCentPerIndiv <- HRCentPerIndiv %>% purrr::list_rbind(names_to = "indiv")
+    HRCentPerIndiv$indiv <- as.character(HRCentPerIndiv$indiv)
     HRReturn <- HRCentPerIndiv
   }
   else{
@@ -249,13 +250,17 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     .x <- as.data.frame(.x)
     .x$timestep = 1:nrow(.x)
     .x$day = rep(1:Days, each = DayLength)
+    .x$StepInDay <- rep(1:DayLength, Days)
     return(.x)
   }) %>% purrr::list_rbind(names_to = "indiv")
+  XYind$indiv <- as.character(XYind$indiv)
   names(XYind)[names(XYind) == "V1"] <- "X"
   names(XYind)[names(XYind) == "V2"] <- "Y"
   out <- list("rName" = rName, "matlabName" = matlabName, "HRCent" = HRReturn, "XY" = XYind)
   return(out)
 }
+
+
 
 #test <- simulateAgents(N = 5, Days = 10)
 # save(list("HRCent" = HRCent, "XY" = XYind_log2), file = Name1)
@@ -274,8 +279,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
 fix_times <- function(simulation_data, sampling_interval = 10){
   start_time <- as.POSIXct("2023-08-11 23:50")  # note simulation data starts on day 1 step 1 so the mindate will be 8-13 00:00
   simulation_data <- simulation_data %>%
-    dplyr::mutate(datetime = start_time + lubridate::days(Day) + lubridate::minutes(StepInDay * sampling_interval)) %>%
-    dplyr::select(indiv, x, y, datetime)
+    dplyr::mutate(datetime = start_time + lubridate::days(day) + lubridate::minutes(StepInDay * sampling_interval)) %>%
+    dplyr::select(indiv, X, Y, datetime)
   return(simulation_data)
 }
 
@@ -285,7 +290,7 @@ get_edgelist <- function(data, idCol, dateCol){
   if(is.data.frame(data))
     data <- data.table::setDT(data)
   timegroup_data <- spatsoc::group_times(data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
-  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('x','y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
+  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('X','Y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
 }
 
 # 5 rotate_data_table ------------------------------------------------------------
