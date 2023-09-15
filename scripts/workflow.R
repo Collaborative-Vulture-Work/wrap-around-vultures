@@ -6,7 +6,7 @@ library(spatsoc) # to implement the trajectory randomization method as described
 
 # 1. Run the simulation to obtain simulated data --------------------------
 # NON-SOCIABLE
-# sim_data_ns <- simulateAgents(N_indv = 30, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
+sim_data_ns <- simulateAgents(N_indv = 10, DaysToSimulate = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Social_Pecrt_rng = 0)
 # str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
 # save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
