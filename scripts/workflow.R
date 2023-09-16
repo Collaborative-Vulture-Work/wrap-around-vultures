@@ -6,7 +6,7 @@ library(spatsoc) # to implement the trajectory randomization method as described
 
 # 1. Run the simulation to obtain simulated data --------------------------
 # NON-SOCIABLE
-sim_data_ns <- simulateAgents(N = 30, Days = 25, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0)
+sim_data_ns <- simulateAgents(N = 10, Days = 10, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0)
 str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
 save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
@@ -14,13 +14,13 @@ save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
 # R.matlab::writeMat(con = paste0("data/", sim_data_ns$matlabName), XY = sim_data_ns$XY, HRCntXY = sim_data_ns$HRCntXY)
 
 # SOCIABLE
-sim_data_s <- simulateAgents(N = 30, Days = 25, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0, socialWeight = 0.5)
+sim_data_s <- simulateAgents(N = 10, Days = 10, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 500, socialWeight = 0) # setting socialWeight to 0 SHOULD be equivalent to setting Soc_Percep_Rng to 0. But it's not! What is going on?
 # Save R data:
 save(sim_data_s, file = "data/sim_data_s.Rda")
 
 # tests for HR moving
-test <- simulateAgents(N = 5, Days = 6, DayLength = 50, Soc_Percep_Rng = 2000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind = 7, StpStd_ind = 5, Kappa_ind = 3, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0, HRStpSize = 1000, HRStpStd = 100)
-test$XY %>% ggplot(aes(x = X, y = Y, col = factor(day)))+geom_point()+geom_point(data = test$HRCent, pch = 4)+facet_wrap(~indiv, scales = "free")+theme_minimal()
+# test <- simulateAgents(N = 5, Days = 6, DayLength = 50, Soc_Percep_Rng = 2000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind = 7, StpStd_ind = 5, Kappa_ind = 3, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0, HRStpSize = 1000, HRStpStd = 100)
+# test$XY %>% ggplot(aes(x = X, y = Y, col = factor(day)))+geom_point()+geom_point(data = test$HRCent, pch = 4)+facet_wrap(~indiv, scales = "free")+theme_minimal()
 # Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
 
 # 2. Load the simulated data and extract the xy coords --------------------
@@ -33,6 +33,8 @@ load("data/sim_data_s.Rda")
 sd_s <- sim_data_s$XY # extract just the XY coords
 sd_s <- fix_times(sd_s)
 save(sd_s, file = "data/sd_s.Rda")
+ggplot(sd_s, aes(x = X, y = Y, col = indiv, alpha = datetime))+geom_point()+theme_minimal() + theme(legend.position = "none")
+ggplot(sd_ns, aes(x = X, y = Y, col = indiv, alpha = datetime))+geom_point()+theme_minimal() + theme(legend.position = "none") # okay, it looks like these individuals are taking the first day and wandering wherever with no bias, and then they start to have a bias toward their home range after that.
 
 # 2.5 create separate date and time columns -------------------------------
 # Need this as a precursor for rotate_data_table.
@@ -45,7 +47,7 @@ sd_s$time <- stringr::str_extract(sd_s$datetime, pattern = "[0-9]{2}\\:[0-9]{2}\
 sd_s$time <- replace_na(sd_s$time, "00:00:00")
 
 # 3. Get permutation realizations -----------------------------------------
-n <- 100
+n <- 50
 sm <- 5 # can shift 5 days in either direction, 10 day range total
 # CONVEYOR
 ## Conveyor: NON-SOCIABLE

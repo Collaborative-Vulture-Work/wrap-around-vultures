@@ -80,7 +80,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   HRCent <- matrix(data = NA, nrow = N, ncol = 3) # Empty matrix that will store home range centers
   HRCent[,3] <- rep(c(1,2), length.out = nrow(HRCent)) # Assign sex 
   HRcenterDist <- rep(0, N/2) # Initial distance between pairs of agents
-  
+
   # 6. Set initial conditions for individuals ----------------------------------
   # Loop on individuals: set initial conditions
   for (k in 1:N) {
@@ -104,6 +104,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   } # End loop on individuals 
   
   # If the HR's are going to be changing (sim2 or sim3), create a list to store daily HR centers, and set the initial values from HRCent above.
+  HRCentPerDay <- vector(mode = "list", length = Days)
+  HRCentPerDay[[1]] <- HRCent
   if(HRChangeRadius > 0 || sim_3 > 0){
     if(sim_3 > 0){
       if (sameStartingAngle > 0){        # set same starting angle
@@ -118,8 +120,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   
   # 7. Run the simulation ----------------------------------
   # Loop on time steps and individuals to run the simulation
+  dayCount <- 1 # start on day 1
   for(Curr_timestep in 1:(N_timesteps-1)){
-    
     # A. IF NEW DAY:
     # move HR center (sim2 and sim3)
     if(T){
@@ -135,8 +137,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           randomXY <- cbind(randomX, randomY) 
           HRCentPerDay[[dayCount]] <- HRCentPerDay[[dayCount-1]]
           HRCentPerDay[[dayCount]][, 1:2] <- HRCentPerDay[[dayCount]][, 1:2] + randomXY # move HR centers
-        }
-        if(sim_3 > 0){ # vm HR change
+        }else if(sim_3 > 0){ # vm HR change
           mu <- HRCentPerDay[[dayCount - 1]][, 3] # get list of old mus
           HRmu.av <- Arg(HREtaCRW * exp(HRPhi_ind * (0+1i)) + (1 - HREtaCRW) * exp(mu * (0+1i))) # averages between old direction and new mu based on HREtaCRW
           HRPhi_ind <- sapply(HRmu.av, function(x){CircStats::rvm(n = 1, mean = x, k = HRKappa_ind)}) # sample new mus
@@ -147,6 +148,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           HRCentPerDay[[dayCount]] <- HRCentPerDay[[dayCount-1]]
           HRCentPerDay[[dayCount]][, 1:2] <- HRCentPerDay[[dayCount]][, 1:2] + steps # move HRS
           HRCentPerDay[[dayCount]][, 3] <- HRPhi_ind # set new mus for next day
+        }else{ # if neither of these situations, keep the home range the same.
+          HRCentPerDay[[dayCount]] <- HRCentPerDay[[dayCount-1]]
         }
       }
     } # end daily moving of HR center
@@ -167,24 +170,25 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       if(HRChangeRadius > 0 || sim_3 > 0){
         BiasPoint <- HRCentPerDay[[dayCount]][Curr_indv, 1:2] # if HR changes per day, set bias point to that day's home range
       }else{
-        BiasPoint <- (XYind[[Curr_indv]][1, ]) # otherwise, bias toward the original home range center
+        BiasPoint <- HRCentPerDay[[1]][Curr_indv, 1:2] # otherwise, bias toward the original home range center
       }
       
-      if((PairedAgents == 1) & (Curr_indv %% 2 == 1)){
-        # Updating bias point as the mean of HR center and mate's last location
-        BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv+1]][Curr_timestep, ]))
-      } 
-      if((PairedAgents == 1) & (Curr_indv %% 2 == 0)){
-        # Update bias point as the mean of HR center and mate's previous location (before last step since he moved already)  
-        BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv-1]][Curr_timestep-1, ]))
-      } 
+      # if((PairedAgents == 1) & (Curr_indv %% 2 == 1)){
+      #   # Updating bias point as the mean of HR center and mate's last location
+      #   BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv+1]][Curr_timestep, ]))
+      # } 
+      # if((PairedAgents == 1) & (Curr_indv %% 2 == 0)){
+      #   # Update bias point as the mean of HR center and mate's previous location (before last step since he moved already)  
+      #   BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv-1]][Curr_timestep-1, ]))
+      # } 
       
       # If another individual is within social perception range...
       if(min(Dist, na.rm = T) < Soc_Percep_Rng){
         if(socialWeight < 0 | socialWeight >1){stop("socialWeight must be a number between 0 and 1.")}
         # Take the mean between the home range center and the closest other individual's location, and bias towards that mean
         otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
-        meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*BiasPoint)/2
+        ownHRCent <- HRCentPerDay[[dayCount]][Curr_indv, 1:2]
+        meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)
         BiasPoint <- meanpoint
       }
       
