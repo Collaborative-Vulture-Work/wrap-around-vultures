@@ -188,7 +188,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
         # Take the mean between the home range center and the closest other individual's location, and bias towards that mean
         otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
         ownHRCent <- HRCentPerDay[[dayCount]][Curr_indv, 1:2]
-        meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)/2
+        meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)
         BiasPoint <- meanpoint
       }
       
