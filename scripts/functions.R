@@ -4,7 +4,7 @@ library(dplyr)
 library(lubridate)
 library(data.table)
 library(spatsoc)
-library(multidplyr)
+library(proxy)
 #devtools::install_github("kaijagahm/vultureUtils")
 # library(vultureUtils)
 
@@ -34,7 +34,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            Kappa_ind = 3, # Concentration parameters of von Mises directional distributions used for individuals' movement
                            ToPlot = 1,
                            quiet = F,
-                           sim_3 = 0,
+                           sim_3 = F,
                            HRChangeRadius = 0, # Radius in which new HR center is to be selected from the next day
                            HREtaCRW = 0.7, # parameters for HR BCRW
                            HRKappa_ind = 1, # controls how strongly vm distribution is centered on mu
@@ -106,16 +106,14 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   # If the HR's are going to be changing (sim2 or sim3), create a list to store daily HR centers, and set the initial values from HRCent above.
   HRCentPerDay <- vector(mode = "list", length = Days)
   HRCentPerDay[[1]] <- HRCent
-  if(HRChangeRadius > 0 || sim_3 > 0){
-    if(sim_3 > 0){
-      if (sameStartingAngle > 0){        # set same starting angle
-        angle <- runif(1, min=0, 2 * pi)
-        HRCentPerDay[[1]][, 3] <- angle
-      }
-      else # set different starting angles
-        HRCentPerDay[[1]][, 3] <- runif(N, min=0, 2 * pi)
-      HRPhi_ind <- rep(0, N) # Direction of the last step for the HRs
+  if(sim_3){
+    if (sameStartingAngle > 0){        # set same starting angle
+      angle <- runif(1, min=0, 2 * pi)
+      HRCentPerDay[[1]][, 3] <- angle
     }
+    else # set different starting angles
+      HRCentPerDay[[1]][, 3] <- runif(N, min=0, 2 * pi)
+    HRPhi_ind <- rep(0, N) # Direction of the last step for the HRs
   }
   
   # 7. Run the simulation ----------------------------------
@@ -464,4 +462,21 @@ calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup
   return(dfSRI)
 }
 
+get_tortuosity <- function(data){
+  tortuosity <- data.frame()
+  for(i in unique(data$indiv)){
+    i_points <- data[data$indiv == i, ]
+    i_points_lead <- i_points
+    i_points_lead <- i_points_lead %>%
+      mutate(X = lead(i_points_lead$X, 1), Y = lead(i_points_lead$Y, 1))
+    length <- proxy::dist(i_points[c("X", "Y")], i_points_lead[c("X", "Y")], method="Euclidean", by_rows=T) %>%
+      diag() %>%
+      sum(na.rm = T)
+    end_points <- rbind(i_points[1, ], i_points[nrow(i_points), ])[c("X", "Y")]
+    displacement <- proxy::dist(end_points, method="Euclidean", by_rows=T)
+    i_tortuosity <- length / displacement
+    tortuosity <- rbind(tortuosity, i_tortuosity)
+  }
+  tortuosity
+}
 
