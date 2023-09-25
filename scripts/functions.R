@@ -29,16 +29,16 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            Scl = 2000,
                            seed = NULL,
                            EtaCRW = 0.7, # The weight of the CRW component in the BCRW used to model the Indiv movement
-                           StpSize_ind = 7, # Mean step lengths of individuals;
+                           StpSize_ind = 9, # Mean step lengths of individuals;
                            StpStd_ind = 5, # Standard deviations of step lengths of individuals 
-                           Kappa_ind = 3, # Concentration parameters of von Mises directional distributions used for individuals' movement
-                           ToPlot = 1,
+                           Kappa_ind = 4, # Concentration parameters of von Mises directional distributions used for individuals' movement
+                           ToPlot = 0,
                            quiet = F,
                            sim_3 = F,
                            HRChangeRadius = 0, # Radius in which new HR center is to be selected from the next day
                            HREtaCRW = 0.7, # parameters for HR BCRW
-                           HRKappa_ind = 1, # controls how strongly vm distribution is centered on mu
-                           HRStpSize = 200,
+                           HRKappa_ind = 4, # controls how strongly vm distribution is centered on mu
+                           HRStpSize = 100,
                            HRStpStd = 50,
                            socialWeight = 0.5, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
                            sameStartingAngle = 0
@@ -139,8 +139,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           mu <- HRCentPerDay[[dayCount - 1]][, 3] # get list of old mus
           HRmu.av <- Arg(HREtaCRW * exp(HRPhi_ind * (0+1i)) + (1 - HREtaCRW) * exp(mu * (0+1i))) # averages between old direction and new mu based on HREtaCRW
           HRPhi_ind <- sapply(HRmu.av, function(x){CircStats::rvm(n = 1, mean = x, k = HRKappa_ind)}) # sample new mus
-          stepLengths <- stats::rgamma(N, shape = HRStpSize^2/HRStpStd^2,  # these seem large; might not want to square #
-                                       scale = HRStpStd^2/HRStpSize)
+          stepLengths <- stats::rgamma(N, shape = HRStpSize^2/HRStpStd^2,  
+                                       scale = HRStpStd^2/HRStpSize) # https://math.stackexchange.com/questions/1810257/gamma-functions-mean-and-standard-deviation-through-shape-and-rate
           steps <- stepLengths * c(Re(exp((0+1i) * HRPhi_ind)), 
                                    Im(exp((0+1i) * HRPhi_ind)))
           HRCentPerDay[[dayCount]] <- HRCentPerDay[[dayCount-1]]
@@ -477,6 +477,7 @@ get_tortuosity <- function(data){
     i_tortuosity <- length / displacement
     tortuosity <- rbind(tortuosity, i_tortuosity)
   }
+  colnames(tortuosity)[1] <- "Tortuosity"
   tortuosity
 }
 
