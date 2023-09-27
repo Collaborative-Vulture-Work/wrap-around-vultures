@@ -462,6 +462,9 @@ calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup
   return(dfSRI)
 }
 
+# ?. get_tortuosity ------------------------------------------------------------
+# Returns the tortuosity per individual path, given sim XY data
+# Each row represents an individual
 get_tortuosity <- function(data){
   tortuosity <- data.frame()
   for(i in unique(data$indiv)){
