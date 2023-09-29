@@ -2,65 +2,215 @@ source("scripts/functions.R") # pulls in all the functions (written by Orr and R
 library("tidyverse")
 library("viridis")
 
-statsBySocialWeight <- list() # list of stats by social weights (0, 0.25, 0.5, 0.75)
-simsBySocialWeight <- list() # list of sims by social weights
-socialWeight <- 0 # starting social weight
-socialWeightIncrement <- 0.25 # amount to increment social weight by
-# HRSteps <- 10
 baseAgentStep <- 7
-userHRRatios <- c(1, 5, 10, 25, 50, 100)
+userHRRatios <- seq(from = 1, to = 20, by = 1) # can't take this down to 0 because then the gamma distributions for step size make no sense.
+socialWeights <- seq(from = 0, to = 1, by = 0.1)
 
-for(y in 1:ceiling(1/socialWeightIncrement)){
-  stats <- data.frame() # data frame to hold HR step size and mean tortuosity for the sims
-  sims <- list() # list to hold sims
-  
-  for(x in userHRRatios){
-    HRStpSize <- baseAgentStep * x
-    HRStpStd <- HRStpSize * 0.05
-    print(paste0("Working on HRRatio: ", x, " for weight: ", socialWeight))
-    sim <- simulateAgents(N = 6,
-                           Days = 6,
-                           DayLength = 50,
-                           Soc_Percep_Rng = 1000,
-                           PairedAgents = 0,
-                           PairStartDist = 0,
-                           Scl = 1000,
-                           seed = 9252023,
-                           EtaCRW = 0.7,
-                           StpSize_ind = baseAgentStep,
-                           StpStd_ind = 5,
-                           Kappa_ind = 4,
-                           ToPlot = 0,
-                           quiet = T,
-                           sim_3 = T,
-                           socialWeight = socialWeight,
-                           HREtaCRW = 0,
-                           HRStpSize = HRStpSize,
-                           HRStpStd = HRStpStd,
-                           HRKappa_ind = 0.01)
+# run the simulations -----------------------------------------------------
+statsBySocialWeight_k0 <- list()
+simsBySocialWeight_k0 <- list()
+# Non-directional home range movement (kappa = 0.01)
+for(y in 1:length(socialWeights)){
+  stats <- data.frame()
+  sims <- list()
+  socialWeight <- socialWeights[y]
+  for(ratio in userHRRatios){
+    HRStpSize <- baseAgentStep*ratio
+    HRStpStd <- HRStpSize*0.75 # setting the standard deviation to 5% of the mean.
+    print(paste0("Working on HRRatio: ", ratio, " for weight: ", socialWeight))
+    sim <- simulateAgents(N = 30,
+                          Days = 5,
+                          DayLength = 50, 
+                          Soc_Percep_Rng = 1000,
+                          PairedAgents = 0,
+                          PairStartDist = 0,
+                          Scl = 1000,
+                          seed = 9252023,
+                          EtaCRW = 0.7,
+                          StpSize_ind = baseAgentStep,
+                          StpStd_ind = 5,
+                          Kappa_ind = 4,
+                          ToPlot = 0,
+                          quiet = T,
+                          sim_3 = T,
+                          socialWeight = socialWeight,
+                          HREtaCRW = 0,
+                          HRStpSize = HRStpSize,
+                          HRStpStd = HRStpStd,
+                          HRKappa_ind = 0.01)
     sims <- c(sims, list(sim))
     tortuosityByIndiv <- get_tortuosity(sim$XY) # get tortuosity per individual
     mean_tortuosity <- colMeans(tortuosityByIndiv)
-    # strength_tortuosity <- colSums(tortuosityByIndiv)
     strength_tortuosity <- 0
-    stats <- rbind(stats, c(HRStpSize, mean_tortuosity, strength_tortuosity)) # add stats to list
+    stats <- rbind(stats, c(HRStpSize, ratio, socialWeight, mean_tortuosity)) # add stats to list
   }
-  colnames(stats) <- c("HRStpSize", "mean_tortuosity", "strength_tortuos") # rename columns
-  statsBySocialWeight <- c(statsBySocialWeight, list(stats)) # add stats and sims to list
-  simsBySocialWeight <- c(simsBySocialWeight, list(sims))
-  socialWeight <- socialWeight + socialWeightIncrement # increment social weight
+  colnames(stats) <- c("HRStpSize", "ratio", "socialWeight", "mean_tortuosity") # rename columns
+  statsBySocialWeight_k0 <- c(statsBySocialWeight_k0, list(stats)) # add stats and sims to list
+  simsBySocialWeight_k0 <- c(simsBySocialWeight_k0, list(sims))
 }
 
-plot(statsBySocialWeight[[1]]$HRStpSize, statsBySocialWeight[[1]]$mean_tortuosity, "l", col="green", xlab="HR Step Size", ylab="Mean Tortuosity")
-lines(statsBySocialWeight[[2]]$HRStpSize, statsBySocialWeight[[2]]$mean_tortuosity, "l", col="red")
-lines(statsBySocialWeight[[3]]$HRStpSize, statsBySocialWeight[[3]]$mean_tortuosity, "l", col="blue")
-lines(statsBySocialWeight[[4]]$HRStpSize, statsBySocialWeight[[4]]$mean_tortuosity, "l", col="purple")
-legend(legend=c("SocialWeight=0", "SocialWeight=0.25", "SocialWeight=0.5", "SocialWeight=0.75"), fill= c("green", "red", "blue", "purple"), "topright")
+save(simsBySocialWeight_k0, file = "data/simsBySocialWeight_k0.Rda")
+save(statsBySocialWeight_k0, file = "data/statsBySocialWeight_k0.Rda")
 
-sim_0 <- simsBySocialWeight[[1]]
-for(i in 1:length(sim_0)){
-  sim <- sim_0[[i]]
-  ratio <- userHRRatios[i]
-  p <- sim$XY %>% ggplot(aes(x = X, y = Y, col = day))+geom_point(alpha = 0.7)+geom_point(data = sim$HRCent, pch = 19, size = 5)+facet_wrap(~indiv, scales = "free")+theme_minimal()+theme(legend.position = "none")+scale_color_viridis() + ggtitle(paste("Ratio", ratio))
-  ggsave(p, filename=paste0("fig/sensitivity_analysis/ratio_", ratio, ".jpg"), width=7, height = 5)
+# Combine the stats into one data frame
+stats_k0 <-  statsBySocialWeight_k0 %>% purrr::list_rbind()
+
+statsBySocialWeight_k4 <- list()
+simsBySocialWeight_k4 <- list()
+# Directional home range movement (Kappa = 4)
+for(y in 1:length(socialWeights)){
+  stats <- data.frame()
+  sims <- list()
+  socialWeight <- socialWeights[y]
+  for(ratio in userHRRatios){
+    HRStpSize <- baseAgentStep*ratio
+    HrStpStd <- HRStpSize*0.75 # setting the standard deviation to 5% of the mean.
+    print(paste0("Working on HRRatio: ", ratio, " for weight: ", socialWeight))
+    sim <- simulateAgents(N = 30,
+                          Days = 5,
+                          DayLength = 50, 
+                          Soc_Percep_Rng = 1000,
+                          PairedAgents = 0,
+                          PairStartDist = 0,
+                          Scl = 1000,
+                          seed = 9252023,
+                          EtaCRW = 0.7,
+                          StpSize_ind = baseAgentStep,
+                          StpStd_ind = 5,
+                          Kappa_ind = 4,
+                          ToPlot = 0,
+                          quiet = T,
+                          sim_3 = T,
+                          socialWeight = socialWeight,
+                          HREtaCRW = 0,
+                          HRStpSize = HRStpSize,
+                          HRStpStd = HRStpStd,
+                          HRKappa_ind = 4)
+    sims <- c(sims, list(sim))
+    tortuosityByIndiv <- get_tortuosity(sim$XY) # get tortuosity per individual
+    mean_tortuosity <- colMeans(tortuosityByIndiv)
+    strength_tortuosity <- 0
+    stats <- rbind(stats, c(HRStpSize, ratio, socialWeight, mean_tortuosity)) # add stats to list
+  }
+  colnames(stats) <- c("HRStpSize", "ratio", "socialWeight", "mean_tortuosity") # rename columns
+  statsBySocialWeight_k4 <- c(statsBySocialWeight_k4, list(stats)) # add stats and sims to list
+  simsBySocialWeight_k4 <- c(simsBySocialWeight_k4, list(sims))
 }
+
+save(simsBySocialWeight_k4, file = "data/simsBySocialWeight_k4.Rda")
+save(statsBySocialWeight_k4, file = "data/statsBySocialWeight_k4.Rda")
+
+# Combine the stats into one data frame
+stats_k4 <-  statsBySocialWeight_k4 %>% purrr::list_rbind()
+
+# Make graphs -------------------------------------------------------------
+# Line graph
+stats_k0 %>%
+  ggplot(aes(x = ratio, y = mean_tortuosity, col = factor(socialWeight)))+
+  geom_line(linewidth = 1.5)+
+  scale_color_viridis_d(name = "social \nweight")+
+  theme_classic()
+
+stats_k4 %>%
+  ggplot(aes(x = ratio, y = mean_tortuosity, col = factor(socialWeight)))+
+  geom_line(linewidth = 1.5)+
+  scale_color_viridis_d(name = "social \nweight")+
+  theme_classic()
+
+stats_k0 %>%
+  mutate(kappa = 0) %>%
+  bind_rows(stats_k4 %>% mutate(kappa = 4)) %>%
+  ggplot(aes(x = ratio, y = mean_tortuosity, col = factor(socialWeight)))+
+  geom_line(linewidth = 1.5)+
+  scale_color_viridis_d(name = "social \nweight")+
+  theme_classic()+
+  facet_wrap(~kappa)
+
+# Heat map
+heatmap_k0 <- stats_k0 %>%
+  ggplot(aes(x = ratio, y = socialWeight, fill = mean_tortuosity))+
+  geom_tile()+
+  scale_fill_viridis_c()+
+  ylab("Social Weight")+
+  xlab("HR step / Agent step")
+heatmap_k0
+ggsave(heatmap_k0, filename = "fig/heatmap.png", width = 6, height = 5)
+
+heatmap_k4 <- stats_k4 %>%
+  ggplot(aes(x = ratio, y = socialWeight, fill = mean_tortuosity))+
+  geom_tile()+
+  scale_fill_viridis_c()+
+  ylab("Social Weight")+
+  xlab("HR step / Agent step")
+heatmap_k4
+ggsave(heatmap_k4, filename = "fig/heatmap.png", width = 6, height = 5)
+
+# Un-nesting the list so we can plot the data
+xy_k0 <- simsBySocialWeight_k0
+names(xy_k0) <- socialWeights
+xy_k0 <- xy_k0 %>% map(~ map(., "XY"))
+xy_k0 <- map(xy_k0, ~map2(.x, .y = userHRRatios, ~{.x %>% mutate(ratio = .y)}) %>% purrr::list_rbind())
+xys_k0 <- purrr::list_rbind(xy_k0, names_to = "socialWeight")
+xys_k0$socialWeight <- as.numeric(xys_k0$socialWeight)
+xys_k0$indiv <- as.factor(xys_k0$indiv)
+
+hrc_k0 <- simsBySocialWeight_k0
+names(hrc_k0) <- socialWeights
+hrc_k0 <- hrc_k0 %>% map(~ map(., "HRCent"))
+hrc_k0 <- map(hrc_k0, ~map2(.x, .y = userHRRatios, ~{.x %>% mutate(ratio = .y)}) %>% purrr::list_rbind())
+hrcs_k0 <- purrr::list_rbind(hrc_k0, names_to = "socialWeight")
+hrcs_k0$socialWeight <- as.numeric(hrcs_k0$socialWeight)
+hrcs_k0$indiv <- as.factor(hrcs_k0$indiv)
+
+xy_k4 <- simsBySocialWeight_k4
+names(xy_k4) <- socialWeights
+xy_k4 <- xy_k4 %>% map(~ map(., "XY"))
+xy_k4 <- map(xy_k4, ~map2(.x, .y = userHRRatios, ~{.x %>% mutate(ratio = .y)}) %>% purrr::list_rbind())
+xys_k4 <- purrr::list_rbind(xy_k4, names_to = "socialWeight")
+xys_k4$socialWeight <- as.numeric(xys_k4$socialWeight)
+xys_k4$indiv <- as.factor(xys_k4$indiv)
+
+hrc_k4 <- simsBySocialWeight_k4
+names(hrc_k4) <- socialWeights
+hrc_k4 <- hrc_k4 %>% map(~ map(., "HRCent"))
+hrc_k4 <- map(hrc_k4, ~map2(.x, .y = userHRRatios, ~{.x %>% mutate(ratio = .y)}) %>% purrr::list_rbind())
+hrcs_k4 <- purrr::list_rbind(hrc_k4, names_to = "socialWeight")
+hrcs_k4$socialWeight <- as.numeric(hrcs_k4$socialWeight)
+hrcs_k4$indiv <- as.factor(hrcs_k4$indiv)
+
+#Define a plotting function
+plt <- function(r, sw, n = NULL, xy, hr){
+  indivs <- levels(xy$indiv)
+  if(!is.null(n)){
+    random <- sample(indivs, size = n)
+  }else{
+    random <- indivs
+  }
+  dat <- xy %>% filter(ratio == r, socialWeight == sw, indiv %in% random)
+  hrs <- hr %>% filter(ratio == r, socialWeight == sw, indiv %in% random)
+  ggplot() + 
+    geom_point(data = dat, aes(x = X, y = Y, col = day))+
+    geom_point(data = hrs, aes(x = X, y = Y, col = day), 
+                        pch = 19, size = 5)+
+    facet_wrap(~indiv, scales = "free")+theme_minimal()+
+    theme(legend.position = "none", text = element_text(size = 10))+
+    scale_color_viridis()+
+    ggtitle(paste("Ratio", r, ", social weight", sw))
+}
+
+# Investigate the k0 heatmap
+heatmap_k0
+plt(1, 0, xy = xys_k0, hr = hrcs_k0)
+plt(4, 0.2, 5, xy = xys_k0, hr = hrcs_k0)
+plt(10, 0, 5, xy = xys_k0, hr = hrcs_k0)
+# investigating that weird peak
+plt(3, 0.5, xy = xys_k0, hr = hrcs_k0)
+plt(3, 0.6, xy = xys_k0, hr = hrcs_k0)
+plt(3, 0.7, xy = xys_k0, hr = hrcs_k0) # there don't seem to be any particularly interesting changes here. 
+
+# Investigate the k4 heatmap
+heatmap_k4
+plt(1, 0, xy = xys_k4, hr = hrcs_k4)
+plt(4, 0.2, 5, xy = xys_k4, hr = hrcs_k4)
+plt(10, 0, 5, xy = xys_k4, hr = hrcs_k4)
+plt(15, 0, xy = xys_k4, hr = hrcs_k4)

@@ -27,12 +27,34 @@ test$XY %>% ggplot(aes(x = X, y = Y, col = day))+geom_point(alpha = 0.7)+geom_po
 
 # Sim 3: HR's moving in a line
 # Non-sociable
-test <- simulateAgents(N = 6, Days = 6, DayLength = 50, Soc_Percep_Rng = 1000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind =9, StpStd_ind = 5, Kappa_ind = 4, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0, HRStpSize = 100, HRStpStd = 50, HRKappa_ind = 4)
-test$XY %>% ggplot(aes(x = X, y = Y, col = day))+geom_point(alpha = 0.7)+geom_point(data = test$HRCent, pch = 19, size = 5)+facet_wrap(~indiv, scales = "free")+theme_minimal()+theme(legend.position = "none")+scale_color_viridis()
+test <- simulateAgents(N = 6, Days = 6, DayLength = 50, 
+                       Soc_Percep_Rng = 1000, PairedAgents = 0, 
+                       PairStartDist = 0, Scl = 1000, 
+                       seed = NULL, EtaCRW = 0.7, 
+                       StpSize_ind =9, StpStd_ind = 5, 
+                       Kappa_ind = 4, ToPlot = 0, 
+                       quiet = F, sim_3 = T, socialWeight = 0, 
+                       HRStpSize = 200, HRStpStd = 50, 
+                       HRKappa_ind = 4, HREtaCRW = 0.7)
+test$XY %>% ggplot(aes(x = X, y = Y, col = day))+
+  geom_point(alpha = 0.7)+
+  geom_point(data = test$HRCent, pch = 19, size = 5)+
+  facet_wrap(~indiv, scales = "free")+
+  theme_minimal()+
+  theme(legend.position = "none")+
+  scale_color_viridis()
 #Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
 
 # Sociable
-test <- simulateAgents(N = 6, Days = 6, DayLength = 50, Soc_Percep_Rng = 1000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind =9, StpStd_ind = 5, Kappa_ind = 4, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0.3, HRStpSize = 100, HRStpStd = 50)
+test <- simulateAgents(N = 6, Days = 6, DayLength = 50, 
+                       Soc_Percep_Rng = 1000, PairedAgents = 0, 
+                       PairStartDist = 0, Scl = 1000, 
+                       seed = NULL, EtaCRW = 0.7, 
+                       StpSize_ind =9, StpStd_ind = 5, 
+                       Kappa_ind = 4, ToPlot = 0, 
+                       quiet = F, sim_3 = T, socialWeight = 0.3, 
+                       HRStpSize = 100, HRStpStd = 50,
+                       HRKappa_ind = 4, HREtaCRW = 0.7)
 test$XY %>% ggplot(aes(x = X, y = Y, col = day))+geom_point(alpha = 0.7)+geom_point(data = test$HRCent, pch = 19, size = 5)+facet_wrap(~indiv, scales = "free")+theme_minimal()+theme(legend.position = "none")+scale_color_viridis()
 test$XY %>% ggplot(aes(x = X, y = Y, col = factor(indiv)))+geom_point(alpha = 0.7)+theme_minimal()+theme(legend.position = "none")
 #Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
@@ -63,6 +85,7 @@ sd_s$time <- replace_na(sd_s$time, "00:00:00")
 # 3. Get permutation realizations -----------------------------------------
 n <- 50
 sm <- 5 # can shift 5 days in either direction, 10 day range total
+sm2 <- 10
 # CONVEYOR
 ## Conveyor: NON-SOCIABLE
 realizations_conveyor_ns <- vector(mode = "list", length = n)
@@ -71,11 +94,23 @@ for(i in 1:n){
   realizations_conveyor_ns[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
+realizations_conveyor_ns_2 <- vector(mode = "list", length = n)
+for(i in 1:n){
+  cat(".")
+  realizations_conveyor_ns_2[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = sm2, idCol = "indiv", dateCol = "date", timeCol = "time")
+}
+
 ## Conveyor: SOCIABLE
 realizations_conveyor_s <- vector(mode = "list", length = n)
 for(i in 1:n){
   cat(".")
   realizations_conveyor_s[[i]] <- rotate_data_table(dataset = sd_s, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
+}
+
+realizations_conveyor_s_2<- vector(mode = "list", length = n)
+for(i in 1:n){
+  cat(".")
+  realizations_conveyor_s_2[[i]] <- rotate_data_table(dataset = sd_s, shiftMax = sm2, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
 # RANDOM
@@ -97,22 +132,28 @@ obs_stats_ns <- get_stats(data = sd_ns, edgelist = get_edgelist(data = sd_ns, id
 conv_edges_ns <- map(realizations_conveyor_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_ns <- map2(.x = realizations_conveyor_ns, .y = conv_edges_ns, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
+conv_edges_ns_2 <- map(realizations_conveyor_ns_2, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
+conv_stats_ns_2 <- map2(.x = realizations_conveyor_ns_2, .y = conv_edges_ns_2, ~get_stats(edgelist = .y, data = .x)) %>%
+  purrr::list_rbind(names_to = "iteration")
 rand_edges_ns <- map(realizations_random_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
 rand_stats_ns <- map2(.x = realizations_random_ns, .y = rand_edges_ns, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 
-perms_stats_ns <- conv_stats_ns %>% mutate(type = "conveyor") %>% bind_rows(rand_stats_ns %>% mutate(type = "random"))
+perms_stats_ns <- conv_stats_ns %>% mutate(type = "conveyor", shiftMax = sm) %>% bind_rows(conv_stats_ns_2 %>% mutate(type = "conveyor", shiftMax = sm2)) %>% bind_rows(rand_stats_ns %>% mutate(type = "random"))
 
 # SOCIABLE
 obs_stats_s <- get_stats(data = sd_s, edgelist = get_edgelist(data = sd_s, idCol = "indiv", dateCol = "datetime"))
 conv_edges_s <- map(realizations_conveyor_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_s <- map2(.x = realizations_conveyor_s, .y = conv_edges_s, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
+conv_edges_s_2 <- map(realizations_conveyor_s_2, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
+conv_stats_s_2 <- map2(.x = realizations_conveyor_s_2, .y = conv_edges_s_2, ~get_stats(edgelist = .y, data = .x)) %>%
+  purrr::list_rbind(names_to = "iteration")
 rand_edges_s <- map(realizations_random_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
 rand_stats_s <- map2(.x = realizations_random_s, .y = rand_edges_s, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 
-perms_stats_s <- conv_stats_s %>% mutate(type = "conveyor") %>% bind_rows(rand_stats_s %>% mutate(type = "random"))
+perms_stats_s <- conv_stats_s %>% mutate(type = "conveyor", shiftMax = sm) %>% bind_rows(conv_stats_s_2 %>% mutate(type = "conveyor", shiftMax = sm2)) %>% bind_rows(rand_stats_s %>% mutate(type = "random"))
 
 # TOGETHER
 perms_stats <- perms_stats_ns %>% mutate(sociable = "non-sociable") %>% bind_rows(perms_stats_s %>% mutate(sociable = "sociable"))
