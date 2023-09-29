@@ -117,14 +117,28 @@ stats_k4 %>%
   scale_color_viridis_d(name = "social \nweight")+
   theme_classic()
 
-stats_k0 %>%
+# Shared line plot: ratio vs. tortuosity, colored by socialWeight
+r_tort_sw_line <- stats_k0 %>%
   mutate(kappa = 0) %>%
   bind_rows(stats_k4 %>% mutate(kappa = 4)) %>%
   ggplot(aes(x = ratio, y = mean_tortuosity, col = factor(socialWeight)))+
   geom_line(linewidth = 1.5)+
   scale_color_viridis_d(name = "social \nweight")+
   theme_classic()+
+  facet_wrap(~kappa)+
+  geom_hline(aes(yintercept = 1), col = "blue")
+ggsave(r_tort_sw_line, file = "fig/r_tort_sw_line.png", width = 7, height = 5)
+
+# Shared line plot the other way: socialWeight vs. tortuosity, colored by ratio
+sw_tort_r_line <- stats_k0 %>%
+  mutate(kappa = 0) %>%
+  bind_rows(stats_k4 %>% mutate(kappa = 4)) %>%
+  ggplot(aes(x = socialWeight, y = mean_tortuosity, col = factor(ratio)))+
+  geom_line(linewidth = 1.5)+
+  scale_color_viridis_d(name = "ratio")+
+  theme_classic()+
   facet_wrap(~kappa)
+ggsave(sw_tort_r_line, file = "fig/sw_tort_r_line.png", width = 7, height = 5)
 
 # Heat map
 heatmap_k0 <- stats_k0 %>%
@@ -134,7 +148,7 @@ heatmap_k0 <- stats_k0 %>%
   ylab("Social Weight")+
   xlab("HR step / Agent step")
 heatmap_k0
-ggsave(heatmap_k0, filename = "fig/heatmap.png", width = 6, height = 5)
+ggsave(heatmap_k0, filename = "fig/heatmap_k0.png", width = 6, height = 5)
 
 heatmap_k4 <- stats_k4 %>%
   ggplot(aes(x = ratio, y = socialWeight, fill = mean_tortuosity))+
@@ -143,7 +157,18 @@ heatmap_k4 <- stats_k4 %>%
   ylab("Social Weight")+
   xlab("HR step / Agent step")
 heatmap_k4
-ggsave(heatmap_k4, filename = "fig/heatmap.png", width = 6, height = 5)
+ggsave(heatmap_k4, filename = "fig/heatmap_k4.png", width = 6, height = 5)
+
+heatmap_shared <- stats_k0 %>% mutate(kappa = 0) %>%
+  bind_rows(stats_k4 %>% mutate(kappa = 4)) %>%
+  ggplot(aes(x = ratio, y = socialWeight, fill = mean_tortuosity))+
+  geom_tile()+
+  scale_fill_viridis_c()+
+  ylab("Social Weight")+
+  xlab("HR step / Agent step")+
+  facet_wrap(~kappa)+
+  theme_minimal()
+ggsave(heatmap_shared, filename = "fig/heatmap_shared.png", width = 9, height = 4)
 
 # Un-nesting the list so we can plot the data
 xy_k0 <- simsBySocialWeight_k0
@@ -200,13 +225,7 @@ plt <- function(r, sw, n = NULL, xy, hr){
 
 # Investigate the k0 heatmap
 heatmap_k0
-plt(1, 0, xy = xys_k0, hr = hrcs_k0)
-plt(4, 0.2, 5, xy = xys_k0, hr = hrcs_k0)
-plt(10, 0, 5, xy = xys_k0, hr = hrcs_k0)
-# investigating that weird peak
-plt(3, 0.5, xy = xys_k0, hr = hrcs_k0)
-plt(3, 0.6, xy = xys_k0, hr = hrcs_k0)
-plt(3, 0.7, xy = xys_k0, hr = hrcs_k0) # there don't seem to be any particularly interesting changes here. 
+plt(1, 0.6, xy = xys_k0, hr = hrcs_k0)
 
 # Investigate the k4 heatmap
 heatmap_k4
