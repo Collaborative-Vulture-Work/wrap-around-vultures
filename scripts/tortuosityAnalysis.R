@@ -123,7 +123,7 @@ r_tort_sw_line <- stats_k0 %>%
   bind_rows(stats_k4 %>% mutate(kappa = 4)) %>%
   ggplot(aes(x = ratio, y = mean_tortuosity, col = factor(socialWeight)))+
   geom_line(linewidth = 1.5)+
-  scale_color_viridis_d(name = "social \nweight")+
+  scale_color_viridis_d(name = "social \nweight", option = "H")+
   theme_classic()+
   facet_wrap(~kappa)+
   geom_hline(aes(yintercept = 1), col = "blue")
@@ -135,7 +135,7 @@ sw_tort_r_line <- stats_k0 %>%
   bind_rows(stats_k4 %>% mutate(kappa = 4)) %>%
   ggplot(aes(x = socialWeight, y = mean_tortuosity, col = factor(ratio)))+
   geom_line(linewidth = 1.5)+
-  scale_color_viridis_d(name = "ratio")+
+  scale_color_viridis_d(name = "ratio", option = "H")+
   theme_classic()+
   facet_wrap(~kappa)
 ggsave(sw_tort_r_line, file = "fig/sw_tort_r_line.png", width = 7, height = 5)
