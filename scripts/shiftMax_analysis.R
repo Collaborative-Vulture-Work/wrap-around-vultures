@@ -18,7 +18,7 @@ c_realizations <- vector(mode = "list", length = length(shiftMax_values))
 for(i in 1:length(c_realizations)){
   realizations <- vector(mode = "list", length = n)
   for(j in 1:n){
-    cat(".")
+    cat(i, " ", j, "\n")
     realizations[[j]] <- rotate_data_table(dataset = sd_s, shiftMax = shiftMax_values[i], idCol = "indiv", dateCol = "date", timeCol = "time")
   }
   c_realizations[[i]] <- realizations
@@ -29,3 +29,13 @@ data.table::setDT(sd_s)
 sd_s$datetime <- as.POSIXct(sd_s$datetime)
 realizations_random_s <- as.data.frame(randomizations(DT = sd_s, type = "trajectory", id = "indiv", datetime = "datetime", coords = c("x", "y"), iterations = n)) %>%
   filter(iteration != 0) %>% group_split(iteration, .keep = TRUE)
+
+# Get edges and stats
+obs_stats_s <- get_stats(data = sd_s, edgelist = get_edgelist(data = sd_s, idCol = "indiv", dateCol = "datetime"))
+
+c_realizations_edges <- vector(mode = "list", length = length(c_realizations))
+for(i in 1: length(c_realizations_edges)){
+  c_realizations_edges[[i]] <- map(c_realizations[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
+}
+
+r_edges <- map(realizations_random_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
