@@ -3,7 +3,7 @@ library("tidyverse")
 library("viridis")
 
 baseAgentStep <- 7
-userHRRatios <- seq(from = 1, to = 20, by = 1) # can't take this down to 0 because then the gamma distributions for step size make no sense.
+userHRRatios <- seq(from = 1, to = 20, by = 2) # can't take this down to 0 because then the gamma distributions for step size make no sense.
 socialWeights <- seq(from = 0, to = 1, by = 0.1)
 
 # run the simulations -----------------------------------------------------
@@ -18,9 +18,9 @@ for(y in 1:length(socialWeights)){
     HRStpSize <- baseAgentStep*ratio
     HRStpStd <- HRStpSize*0.75 # setting the standard deviation to 5% of the mean.
     print(paste0("Working on HRRatio: ", ratio, " for weight: ", socialWeight))
-    sim <- simulateAgents(N = 30,
+    sim <- simulateAgents(N = 6,
                           Days = 5,
-                          DayLength = 50, 
+                          DayLength = 50,
                           Soc_Percep_Rng = 1000,
                           PairedAgents = 0,
                           PairStartDist = 0,
@@ -52,9 +52,6 @@ for(y in 1:length(socialWeights)){
 save(simsBySocialWeight_k0, file = "data/simsBySocialWeight_k0.Rda")
 save(statsBySocialWeight_k0, file = "data/statsBySocialWeight_k0.Rda")
 
-# Combine the stats into one data frame
-stats_k0 <-  statsBySocialWeight_k0 %>% purrr::list_rbind()
-
 statsBySocialWeight_k4 <- list()
 simsBySocialWeight_k4 <- list()
 # Directional home range movement (Kappa = 4)
@@ -66,9 +63,9 @@ for(y in 1:length(socialWeights)){
     HRStpSize <- baseAgentStep*ratio
     HrStpStd <- HRStpSize*0.75 # setting the standard deviation to 5% of the mean.
     print(paste0("Working on HRRatio: ", ratio, " for weight: ", socialWeight))
-    sim <- simulateAgents(N = 30,
+    sim <- simulateAgents(N = 6,
                           Days = 5,
-                          DayLength = 50, 
+                          DayLength = 50,
                           Soc_Percep_Rng = 1000,
                           PairedAgents = 0,
                           PairStartDist = 0,
@@ -100,7 +97,14 @@ for(y in 1:length(socialWeights)){
 save(simsBySocialWeight_k4, file = "data/simsBySocialWeight_k4.Rda")
 save(statsBySocialWeight_k4, file = "data/statsBySocialWeight_k4.Rda")
 
+# Plotting ----------------------------------------------------------------
+load("data/simsBySocialWeight_k0.Rda")
+load("data/simsBySocialWeight_k4.Rda")
+load("data/statsBySocialWeight_k0.Rda")
+load("data/statsBySocialWeight_k4.Rda")
+
 # Combine the stats into one data frame
+stats_k0 <-  statsBySocialWeight_k0 %>% purrr::list_rbind()
 stats_k4 <-  statsBySocialWeight_k4 %>% purrr::list_rbind()
 
 # Make graphs -------------------------------------------------------------
@@ -231,5 +235,17 @@ plt(1, 0.6, xy = xys_k0, hr = hrcs_k0)
 heatmap_k4
 plt(1, 0, xy = xys_k4, hr = hrcs_k4)
 plt(4, 0.2, 5, xy = xys_k4, hr = hrcs_k4)
-plt(10, 0, 5, xy = xys_k4, hr = hrcs_k4)
-plt(15, 0, xy = xys_k4, hr = hrcs_k4)
+plt(20, 0, 6, xy = xys_k4, hr = hrcs_k4)
+plt(20, 0.7, 6, xy = xys_k4, hr = hrcs_k4)
+plt(20, 0, 6, xy = xys_k0, hr = hrcs_k0)
+plt(5, 0, 6, xy = xys_k0, hr = hrcs_k0)
+plt(5, 0.7, 6, xy = xys_k0, hr = hrcs_k0)
+
+# Trying to get the three scenarios ---------------------------------------
+# SCENARIO 1: fixed home ranges
+# SCENARIO 2: randomly-moving home ranges
+# SCENARIO 3: directionally-moving home ranges
+# ratio 20, kappa 4
+plt(r = 20, sw = 0, n = 6, xy = xys_k4, hr = hrcs_k4)
+
+
