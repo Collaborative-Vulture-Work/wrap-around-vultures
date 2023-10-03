@@ -3,10 +3,11 @@
 source("scripts/functions.R") # pulls in all the functions (written by Orr and Ryan)
 library(tidyverse) # for data wrangling and plotting
 library(spatsoc) # to implement the trajectory randomization method as described in Orr's paper
+library(viridis)
 
 # 1. Run the simulation to obtain simulated data --------------------------
 # NON-SOCIABLE
-sim_data_ns <- simulateAgents(N = 10, Days = 10, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0)
+sim_data_ns <- simulateAgents(N = 30, Days = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 0)
 str(sim_data_ns, 1) # we end up with a list: file names, and the things to save.
 # Save R data:
 save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
@@ -14,14 +15,49 @@ save(sim_data_ns, file = "data/sim_data_ns.Rda") # XXXK come back to this
 # R.matlab::writeMat(con = paste0("data/", sim_data_ns$matlabName), XY = sim_data_ns$XY, HRCntXY = sim_data_ns$HRCntXY)
 
 # SOCIABLE
-sim_data_s <- simulateAgents(N = 10, Days = 10, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 500, socialWeight = 0) # setting socialWeight to 0 SHOULD be equivalent to setting Soc_Percep_Rng to 0. But it's not! What is going on?
+sim_data_s <- simulateAgents(N = 30, Days = 50, Kappa_ind = 3, quiet = T, ToPlot = 0, Soc_Percep_Rng = 500, socialWeight = 0.75) #
 # Save R data:
 save(sim_data_s, file = "data/sim_data_s.Rda")
 
-# tests for HR moving
-# test <- simulateAgents(N = 5, Days = 6, DayLength = 50, Soc_Percep_Rng = 2000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind = 7, StpStd_ind = 5, Kappa_ind = 3, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0, HRStpSize = 1000, HRStpStd = 100)
-# test$XY %>% ggplot(aes(x = X, y = Y, col = factor(day)))+geom_point()+geom_point(data = test$HRCent, pch = 4)+facet_wrap(~indiv, scales = "free")+theme_minimal()
-# Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
+# tests for HR moving 2023-09-19
+# Sim 2: Randomly changing HR's
+test <- simulateAgents(N = 6, Days = 6, DayLength = 50, Soc_Percep_Rng = 1000, PairedAgents = 0, PairStartDist = 0, Scl = 1000, seed = NULL, EtaCRW = 0.7, StpSize_ind =9, StpStd_ind = 5, Kappa_ind = 4, ToPlot = 0, quiet = F, sim_3 = T, socialWeight = 0, HRStpSize = 0, HRStpStd = 0, HRChangeRadius = 100)
+test$XY %>% ggplot(aes(x = X, y = Y, col = day))+geom_point(alpha = 0.7)+geom_point(data = test$HRCent, pch = 19, size = 5)+facet_wrap(~indiv, scales = "free")+theme_minimal()+theme(legend.position = "none")+scale_color_viridis()
+
+
+# Sim 3: HR's moving in a line
+# Non-sociable
+test <- simulateAgents(N = 6, Days = 6, DayLength = 50, 
+                       Soc_Percep_Rng = 1000, PairedAgents = 0, 
+                       PairStartDist = 0, Scl = 1000, 
+                       seed = NULL, EtaCRW = 0.7, 
+                       StpSize_ind =9, StpStd_ind = 5, 
+                       Kappa_ind = 4, ToPlot = 0, 
+                       quiet = F, sim_3 = T, socialWeight = 0, 
+                       HRStpSize = 200, HRStpStd = 50, 
+                       HRKappa_ind = 4, HREtaCRW = 0.7)
+test$XY %>% ggplot(aes(x = X, y = Y, col = day))+
+  geom_point(alpha = 0.7)+
+  geom_point(data = test$HRCent, pch = 19, size = 5)+
+  facet_wrap(~indiv, scales = "free")+
+  theme_minimal()+
+  theme(legend.position = "none")+
+  scale_color_viridis()
+#Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
+
+# Sociable
+test <- simulateAgents(N = 6, Days = 6, DayLength = 50, 
+                       Soc_Percep_Rng = 1000, PairedAgents = 0, 
+                       PairStartDist = 0, Scl = 1000, 
+                       seed = NULL, EtaCRW = 0.7, 
+                       StpSize_ind =9, StpStd_ind = 5, 
+                       Kappa_ind = 4, ToPlot = 0, 
+                       quiet = F, sim_3 = T, socialWeight = 0.3, 
+                       HRStpSize = 100, HRStpStd = 50,
+                       HRKappa_ind = 4, HREtaCRW = 0.7)
+test$XY %>% ggplot(aes(x = X, y = Y, col = day))+geom_point(alpha = 0.7)+geom_point(data = test$HRCent, pch = 19, size = 5)+facet_wrap(~indiv, scales = "free")+theme_minimal()+theme(legend.position = "none")+scale_color_viridis()
+test$XY %>% ggplot(aes(x = X, y = Y, col = factor(indiv)))+geom_point(alpha = 0.7)+theme_minimal()+theme(legend.position = "none")
+#Seems wrong that the agents are so far from their home ranges. Shouldn't they be starting on their first days' home ranges?
 
 # 2. Load the simulated data and extract the xy coords --------------------
 load("data/sim_data_ns.Rda")
@@ -49,6 +85,7 @@ sd_s$time <- replace_na(sd_s$time, "00:00:00")
 # 3. Get permutation realizations -----------------------------------------
 n <- 50
 sm <- 5 # can shift 5 days in either direction, 10 day range total
+sm2 <- 10
 # CONVEYOR
 ## Conveyor: NON-SOCIABLE
 realizations_conveyor_ns <- vector(mode = "list", length = n)
@@ -57,11 +94,23 @@ for(i in 1:n){
   realizations_conveyor_ns[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
+realizations_conveyor_ns_2 <- vector(mode = "list", length = n)
+for(i in 1:n){
+  cat(".")
+  realizations_conveyor_ns_2[[i]] <- rotate_data_table(dataset = sd_ns, shiftMax = sm2, idCol = "indiv", dateCol = "date", timeCol = "time")
+}
+
 ## Conveyor: SOCIABLE
 realizations_conveyor_s <- vector(mode = "list", length = n)
 for(i in 1:n){
   cat(".")
   realizations_conveyor_s[[i]] <- rotate_data_table(dataset = sd_s, shiftMax = 5, idCol = "indiv", dateCol = "date", timeCol = "time")
+}
+
+realizations_conveyor_s_2<- vector(mode = "list", length = n)
+for(i in 1:n){
+  cat(".")
+  realizations_conveyor_s_2[[i]] <- rotate_data_table(dataset = sd_s, shiftMax = sm2, idCol = "indiv", dateCol = "date", timeCol = "time")
 }
 
 # RANDOM
@@ -83,22 +132,28 @@ obs_stats_ns <- get_stats(data = sd_ns, edgelist = get_edgelist(data = sd_ns, id
 conv_edges_ns <- map(realizations_conveyor_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_ns <- map2(.x = realizations_conveyor_ns, .y = conv_edges_ns, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
+conv_edges_ns_2 <- map(realizations_conveyor_ns_2, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
+conv_stats_ns_2 <- map2(.x = realizations_conveyor_ns_2, .y = conv_edges_ns_2, ~get_stats(edgelist = .y, data = .x)) %>%
+  purrr::list_rbind(names_to = "iteration")
 rand_edges_ns <- map(realizations_random_ns, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
 rand_stats_ns <- map2(.x = realizations_random_ns, .y = rand_edges_ns, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 
-perms_stats_ns <- conv_stats_ns %>% mutate(type = "conveyor") %>% bind_rows(rand_stats_ns %>% mutate(type = "random"))
+perms_stats_ns <- conv_stats_ns %>% mutate(type = "conveyor", shiftMax = sm) %>% bind_rows(conv_stats_ns_2 %>% mutate(type = "conveyor", shiftMax = sm2)) %>% bind_rows(rand_stats_ns %>% mutate(type = "random"))
 
 # SOCIABLE
 obs_stats_s <- get_stats(data = sd_s, edgelist = get_edgelist(data = sd_s, idCol = "indiv", dateCol = "datetime"))
 conv_edges_s <- map(realizations_conveyor_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
 conv_stats_s <- map2(.x = realizations_conveyor_s, .y = conv_edges_s, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
+conv_edges_s_2 <- map(realizations_conveyor_s_2, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
+conv_stats_s_2 <- map2(.x = realizations_conveyor_s_2, .y = conv_edges_s_2, ~get_stats(edgelist = .y, data = .x)) %>%
+  purrr::list_rbind(names_to = "iteration")
 rand_edges_s <- map(realizations_random_s, ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
 rand_stats_s <- map2(.x = realizations_random_s, .y = rand_edges_s, ~get_stats(edgelist = .y, data = .x)) %>%
   purrr::list_rbind(names_to = "iteration")
 
-perms_stats_s <- conv_stats_s %>% mutate(type = "conveyor") %>% bind_rows(rand_stats_s %>% mutate(type = "random"))
+perms_stats_s <- conv_stats_s %>% mutate(type = "conveyor", shiftMax = sm) %>% bind_rows(conv_stats_s_2 %>% mutate(type = "conveyor", shiftMax = sm2)) %>% bind_rows(rand_stats_s %>% mutate(type = "random"))
 
 # TOGETHER
 perms_stats <- perms_stats_ns %>% mutate(sociable = "non-sociable") %>% bind_rows(perms_stats_s %>% mutate(sociable = "sociable"))
@@ -122,7 +177,8 @@ deg_boxplot <- perms_stats %>%
   scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   geom_point(data = obs_stats %>% mutate(ID1 = factor(ID1, levels = ord_deg_s)), 
              aes(x = ID1, y = degree))+
-  facet_wrap(~sociable)
+  facet_wrap(~sociable)+
+  theme(text = element_text(size = 16), axis.text.x = element_blank(), axis.ticks.x = element_blank())
 deg_boxplot
 ggsave(deg_boxplot, file = "fig/degree_boxplot.png", width = 7, height = 4)
 
@@ -137,7 +193,8 @@ str_boxplot <- perms_stats %>%
   scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   geom_point(data = obs_stats %>% mutate(ID1 = factor(ID1, levels = ord_str_s)), 
              aes(x = ID1, y = strength))+
-  facet_wrap(~sociable)
+  facet_wrap(~sociable)+
+  theme(text = element_text(size = 16), axis.text.x = element_blank(), axis.ticks.x = element_blank())
 str_boxplot
 ggsave(str_boxplot, file = "fig/strength_boxplot.png", width = 7, height = 4)
 
@@ -160,7 +217,8 @@ deg_hist <- perm_mns %>%
   geom_vline(data = obs_mns, aes(xintercept = mndeg), linewidth = 1, linetype = 2)+
   scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
-  ylab("")+ xlab("Mean degree") # as expected, we see no difference from either of the permutations for the non-sociable agents, but we do see a difference for the sociable agents. Intriguingly, we also see a difference between the results for the conveyor belt vs. random permutations! Though it's worth noting, that difference goes in the opposite direction I would have expected--I would have thought conveyour would be more similar to observed, not more different.
+  ylab("")+ xlab("Mean degree")+ # as expected, we see no difference from either of the permutations for the non-sociable agents, but we do see a difference for the sociable agents. Intriguingly, we also see a difference between the results for the conveyor belt vs. random permutations! Though it's worth noting, that difference goes in the opposite direction I would have expected--I would have thought conveyour would be more similar to observed, not more different.
+  theme(text = element_text(size = 16))
 ggsave(deg_hist, file = "fig/deg_hist.png", width = 7, height = 4)
 
 str_hist <- perm_mns %>%
@@ -171,7 +229,9 @@ str_hist <- perm_mns %>%
   geom_vline(data = obs_mns, aes(xintercept = mnstr), linewidth = 1, linetype = 2)+
   scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
-  ylab("")+ xlab("Mean strength") # X axis is weird on the sociable histogram because the line is far enough over to make everything else really crunched up.
+  ylab("")+ xlab("Mean strength")+ # X axis is weird on the sociable histogram because the line is far enough over to make everything else really crunched up.
+  theme(text = element_text(size = 16))
+str_hist
 ggsave(str_hist, file = "fig/str_hist.png", width = 7, height = 4)
 
 # As a point of comparison, let's examine just the sociable strength histogram to compare conveyor vs. random, without the line
@@ -182,7 +242,8 @@ perm_mns %>%
   theme_classic()+
   scale_color_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
   scale_fill_manual(name = "Permutation type", values = c("yellowgreen", "skyblue"))+
-  ylab("")+ xlab("Mean strength") # huh, interesting, not as much differentiation here! Conveyor gives a wider range of values than random, and the distribution might be a bit different too (skewed vs. normal)
+  ylab("")+ xlab("Mean strength")+ # huh, interesting, not as much differentiation here! Conveyor gives a wider range of values than random, and the distribution might be a bit different too (skewed vs. normal)
+  theme(text = element_text(size = 16))
 
 # Next figure: x axis = level of sociability. y axis = [obs-random delta], col = permutation type, only sociable. Facets: degree/strength
 # For this to work, we need to do permutations with different levels of sociability. I think this is controlled by EtaCRW (and also Kappa, but mostly EtaCRW) 
