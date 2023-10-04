@@ -177,7 +177,7 @@ p_s2_ns <- ggplot() +
   ggtitle("Scenario 2, non-sociable")
 ggsave(p_s2_ns, file = "fig/p_s2_ns.png", width = 6, height = 7)
 
-sim2_socLevels <- map(socLevels, {
+sim2_socLevels <- map(socLevels, ~{
   sim <- simulateAgents(N = 30,
                  Days = 50,
                  DayLength = 50,
