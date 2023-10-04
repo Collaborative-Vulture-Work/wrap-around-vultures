@@ -34,10 +34,10 @@ sims_xy <- map(sims_xy, ~.x %>% mutate(date = lubridate::date(datetime),
 
 
 # PERMUTATIONS ------------------------------------------------------------
-n <- 5 # how many permutations?
+n <- 3 # how many permutations?
 
 # Conveyor permutations ---------------------------------------------------
-sms <- seq(from = 1, to = 25, by = 5)
+sms <- c(2, 10)
 
 sms_sims_conveyor <- vector(mode = "list", length = length(sms))
 for(i in 1:length(sms)){
@@ -47,8 +47,8 @@ for(i in 1:length(sms)){
     realizations <- vector(mode = "list", length = n)
     for(j in 1:n){
       cat(".")
-      realizations[[j]] <- rotate_data_table(dataset = .x, shiftMax = sm, 
-                                             idCol = "indiv", dateCol = "date", 
+      realizations[[j]] <- rotate_data_table(dataset = .x, shiftMax = shift,
+                                             idCol = "indiv", dateCol = "date",
                                              timeCol = "time")
     }
     cat("\n")
@@ -56,72 +56,85 @@ for(i in 1:length(sms)){
   })
   sms_sims_conveyor[[i]] <- sims_conveyor
 }
-
+save(sms_sims_conveyor, file = "data/simulations/sms_sims_conveyor.Rda")
+load("data/simulations/sms_sims_conveyor.Rda")
 
 # Random permutations -----------------------------------------------------
 sims_xy_dt <- map(sims_xy, setDT) # make them into data tables so we can use the spatsoc function properly
 sims_xy_dt <- map(sims_xy_dt, ~.x %>% mutate(datetime = as.POSIXct(datetime)))
 
-sims_random <- map(sims_xy_dt, ~{
-  r <- spatsoc::randomizations(DT = .x, type = "trajectory", id = "indiv",
-                          datetime = "datetime", coords = c("X", "Y"), 
-                          iterations = n) %>%
-    filter(iteration != 0) %>% # remove the original data (iteration 0)
-    group_by(iteration) %>%
-    group_split(.keep = TRUE)
-  cat("*")
-  return(r)
-})
+# sims_random <- map(sims_xy_dt, ~{
+#   r <- spatsoc::randomizations(DT = .x, type = "trajectory", id = "indiv",
+#                           datetime = "datetime", coords = c("X", "Y"), 
+#                           iterations = n) %>%
+#     filter(iteration != 0) %>% # remove the original data (iteration 0)
+#     group_by(iteration) %>%
+#     group_split(.keep = TRUE)
+#   cat("*")
+#   return(r)
+# })
+# save(sims_random, file = "data/simulations/sims_random.Rda")
+load("data/simulations/sims_random.Rda")
 
 
 # STATS -------------------------------------------------------------------
 # 1. observed simulations
-obs_stats <- map(sims_xy, 
-                 ~get_stats(data = .x, 
-                            edgelist = get_edgelist(.x, idCol = "indiv", 
-                                                    dateCol = "datetime")))
-# Label the stats
-obs_stats <- map2(obs_stats, simulations, ~.x %>% mutate(sim = .y))
-obs_stats <- map2(obs_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
-obs_stats_df <- obs_stats %>% purrr::list_rbind() %>%
-  mutate(uniquesim = paste(sim, sns, sep = "_"))
+# obs_stats <- map(sims_xy, 
+#                  ~get_stats(data = .x, 
+#                             edgelist = get_edgelist(.x, idCol = "indiv", 
+#                                                     dateCol = "datetime")))
+# # Label the stats
+# obs_stats <- map2(obs_stats, simulations, ~.x %>% mutate(sim = .y))
+# obs_stats <- map2(obs_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
+# obs_stats_df <- obs_stats %>% purrr::list_rbind() %>%
+#   mutate(uniquesim = paste(sim, sns, sep = "_"))
+# save(obs_stats_df, file = "data/simulations/obs_stats_df.Rda")
+load("data/simulations/obs_stats_df.Rda")
 
 # 2. conveyor permutations
-sms_conveyor_stats <- vector(mode = "list", length = length(sms))
-for(i in 1:length(sms)){
-  conveyor_stats <- vector(mode = "list", length = length(sims_conveyor))
-  for(j in 1:length(sims_conveyor)){
-    edges <- map(sims_conveyor[[j]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "newdatetime"))
-    stats <- map2(.x = sims_conveyor[[j]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
-      purrr::list_rbind(names_to = "iteration")
-    conveyor_stats[[j]] <- stats
-  }
-  
-  # Label the stats
-  conveyor_stats <- map2(conveyor_stats, simulations, ~.x %>% mutate(sim = .y))
-  conveyor_stats <- map2(conveyor_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
-  conveyor_stats_df <- conveyor_stats %>% purrr::list_rbind()
-  sms_conveyor_stats[[i]] <- conveyor_stats_df
-} 
+stats_shifts <- map(sms_sims_conveyor, ~{
+  simulations <- .x
+  stats_simulations <- map(simulations, ~{
+    iterations <- .x
+    stats_iterations <- map(iterations, ~{
+      data <- .x
+      edges <- get_edgelist(data = data, idCol = "indiv", dateCol = "newdatetime")
+      stats <- get_stats(edgelist = edges, data = data)
+      return(stats)
+    }) %>% purrr::list_rbind(names_to = "iteration")
+  }) %>% purrr::list_rbind(names_to = "simulation")
+}) %>% purrr::list_rbind(names_to = "shift")
 
-sms_conveyor_stats_df <- sms_conveyor_stats %>% 
-  map2(.x = ., .y = sms, ~.x %>% 
-         mutate(shiftMax = .y)) %>%
-  purrr::list_rbind()
+names(sms) <- as.character(1:length(sms))
+names(simulations) <- as.character(1:length(simulations))
+names(soc_nonsoc) <- as.character(1:length(soc_nonsoc))
+
+sms_conveyor_stats_df <- stats_shifts %>%
+  mutate(shift = sms[as.character(shift)],
+         sim = simulations[as.character(simulation)],
+         sns = soc_nonsoc[as.character(simulation)]) %>%
+  select(-simulation)
+  
+save(sms_conveyor_stats_df, file = "data/simulations/sms_conveyor_stats_df.Rda")
+load("data/simulations/sms_conveyor_stats_df.Rda")
                   
 # 3. random permutations
-random_stats <- vector(mode = "list", length = length(sims_random))
-for(i in 1:length(sims_random)){
-  edges <- map(sims_random[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
-  stats <- map2(.x = sims_random[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
-    purrr::list_rbind(names_to = "iteration")
-  random_stats[[i]] <- stats
-}
+# random_stats <- vector(mode = "list", length = length(sims_random))
+# for(i in 1:length(sims_random)){
+#   edges <- map(sims_random[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
+#   stats <- map2(.x = sims_random[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
+#     purrr::list_rbind(names_to = "iteration")
+#   random_stats[[i]] <- stats
+# }
+# save(random_stats, file = "data/simulations/random_stats.Rda")
+load("data/simulations/random_stats.Rda")
 
 # Label the stats
-random_stats <- map2(random_stats, simulations, ~.x %>% mutate(sim = .y))
-random_stats <- map2(random_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
-random_stats_df <- random_stats %>% purrr::list_rbind()
+# random_stats <- map2(random_stats, simulations, ~.x %>% mutate(sim = .y))
+# random_stats <- map2(random_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
+# random_stats_df <- random_stats %>% purrr::list_rbind()
+# save(random_stats_df, file = "data/simulations/random_stats_df.Rda")
+load("data/simulations/random_stats_df.Rda")
 
 # Combine all the stats
 stats_perm <- sms_conveyor_stats_df %>% mutate(type = "conveyor") %>%
@@ -143,7 +156,8 @@ for(i in 1:length(uniquesims)){
   datobs <- datobs %>%
     mutate(ID1 = factor(ID1, levels = ord))
   datperm <- stats_perm %>%
-    filter(uniquesim == usim) %>%
+    filter(uniquesim == usim,
+           shift %in% c(2, NA)) %>%
     mutate(ID1 = factor(ID1, levels = ord))
   
   # Make the plot
@@ -167,7 +181,7 @@ gridExtra::grid.arrange(gt, left = "Strength", bottom = "Ranked agents")
 
 # Histograms: mean value vs. black
 summ <- stats_perm %>%
-  group_by(uniquesim, type, iteration) %>%
+  group_by(uniquesim, type, iteration, shift) %>%
   summarize(mndeg = mean(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T))
 obs_summ <- obs_stats_df %>%
@@ -176,9 +190,11 @@ obs_summ <- obs_stats_df %>%
             mnstr = mean(strength, na.rm = T))
 
 summ %>%
-  ggplot(aes(x = mnstr, col = type, fill = type))+
+  mutate(shift = factor(shift, levels = sms)) %>%
+  filter(type == "conveyor") %>%
+  ggplot(aes(x = mnstr, col = shift, fill = shift))+
   geom_histogram()+
-  facet_wrap(~uniquesim, ncol = 2, nrow = 3)+
+  facet_wrap(~uniquesim, ncol = 2, nrow = 3, scales = "free")+
   theme_classic()+
-  theme(legend.position = "none")+
+  #theme(legend.position = "none")+
   geom_vline(data = obs_summ, aes(xintercept = mnstr), linetype = 2)
