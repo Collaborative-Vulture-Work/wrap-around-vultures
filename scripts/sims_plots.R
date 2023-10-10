@@ -40,7 +40,7 @@ for(i in 1:length(uniquesims)){
 test <- patchwork::wrap_plots(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], plots[[6]], ncol = 2, byrow = T)
 gt <- patchwork::patchworkGrob(test)
 str_6panel <- gridExtra::grid.arrange(gt, left = "Strength", bottom = "Ranked agents")
-ggsave(str_6panel, filename = "fig/str_6panel.png", width = 7, height = 6)
+ggsave(str_6panel, filename = "fig/sims_plots/str_6panel.png", width = 7, height = 6)
 
 # 6-panel boxplot: degree
 plots <- vector(mode = "list", length = length(uniquesims))
@@ -77,7 +77,7 @@ for(i in 1:length(uniquesims)){
 test <- patchwork::wrap_plots(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], plots[[6]], ncol = 2, byrow = T)
 gt <- patchwork::patchworkGrob(test)
 deg_6panel <- gridExtra::grid.arrange(gt, left = "Degree", bottom = "Ranked agents")
-ggsave(deg_6panel, filename = "fig/deg_6panel.png", width = 7, height = 6)
+ggsave(deg_6panel, filename = "fig/sims_plots/deg_6panel.png", width = 7, height = 6)
 
 # Histograms: mean value vs. black
 summ <- stats_perm %>%
@@ -102,7 +102,7 @@ shifthistrs_str <- summ %>%
   #theme(legend.position = "none")+
   geom_vline(data = obs_summ, aes(xintercept = mnstr), linetype = 2)+
   ylab("")+xlab("Mean strength")
-ggsave(shifthistrs_str, filename = "fig/shifhistrs_str.png", width = 9, height = 8)
+ggsave(shifthistrs_str, filename = "fig/sims_plots/shifhistrs_str.png", width = 9, height = 8)
 
 shifthistrs_deg <- summ %>%
   filter(type == "conveyor") %>%
@@ -115,7 +115,7 @@ shifthistrs_deg <- summ %>%
   #theme(legend.position = "none")+
   geom_vline(data = obs_summ, aes(xintercept = mndeg), linetype = 2)+
   ylab("")+xlab("Mean degree")
-ggsave(shifthistrs_deg, filename = "fig/shifhistrs_deg.png", width = 9, height = 8)
+ggsave(shifthistrs_deg, filename = "fig/sims_plots/shifhistrs_deg.png", width = 9, height = 8)
 
 # Deltas
 # Referring back to the histograms: let's look at the difference between each individual's real value and the mean of its values in the permutations. 
@@ -145,7 +145,7 @@ deltahists_deg <- deltas %>%
   geom_density(data = deltas %>% filter(is.na(shiftprop)), 
                aes(x = delta_deg_zscore), col = "red")+
   ylab("")+xlab("Observed degree z-score")
-ggsave(deltahists_deg, filename = "fig/deltahists_deg.png", width = 6, height = 7)
+ggsave(deltahists_deg, filename = "fig/sims_plots/deltahists_deg.png", width = 6, height = 7)
 
 deltahists_str <- deltas %>%
   filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
@@ -158,7 +158,7 @@ deltahists_str <- deltas %>%
   # add back random-shuffled data
   geom_density(data = deltas %>% filter(is.na(shiftprop)), aes(x = delta_str_zscore), col = "red")+
   ylab("")+xlab("Obs - mean permuted, Strength")
-ggsave(deltahists_str, filename = "fig/deltahists_str.png", width = 6, height = 7)
+ggsave(deltahists_str, filename = "fig/sims_plots/deltahists_str.png", width = 6, height = 7)
 
 # Do more emergently-social agents deviate more/less from the permutation means than less emergently-social agents?
 # First, let's calculate the rank for the emergent sociality of each individual
@@ -179,7 +179,7 @@ deg_soc_z <- ranked %>%
   geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", method = "lm", se = F)+
   facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
   ylab("Observed degree z-score") + xlab("Agent rank (degree)")
-ggsave(deg_soc_z, filename = "fig/sims_plots/deg_soz_z.png", height = 7, width = 6)
+ggsave(deg_soc_z, filename = "fig/sims_plots/deg_soc_z.png", height = 7, width = 6)
 
 str_soc_z <- ranked %>%
   filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
@@ -191,4 +191,4 @@ str_soc_z <- ranked %>%
   geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", method = "lm", se = F)+
   facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
   ylab("Observed strength z-score") + xlab("Agent rank (strength)")
-ggsave(str_soc_z, filename = "fig/sims_plots/str_soz_z.png", height = 7, width = 6)
+ggsave(str_soc_z, filename = "fig/sims_plots/str_soc_z.png", height = 7, width = 6)
