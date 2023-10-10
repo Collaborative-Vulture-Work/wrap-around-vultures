@@ -83,7 +83,8 @@ ggsave(deg_6panel, filename = "fig/deg_6panel.png", width = 7, height = 6)
 summ <- stats_perm %>%
   group_by(uniquesim, type, iteration, shift) %>%
   summarize(mndeg = mean(degree, na.rm = T),
-            mnstr = mean(strength, na.rm = T))
+            mnstr = mean(strength, na.rm = T)) %>%
+  mutate(shiftprop = (2*shift)/50)
 obs_summ <- obs_stats_df %>%
   group_by(uniquesim) %>%
   summarize(mndeg = mean(degree, na.rm = T),
@@ -91,26 +92,26 @@ obs_summ <- obs_stats_df %>%
 
 # Shift histograms
 shifthistrs_str <- summ %>%
-  mutate(shiftprop = (2*shift)/50) %>%
   filter(type == "conveyor") %>%
   ggplot(aes(x = mnstr, group = factor(shiftprop)))+
   geom_density(aes(col = shiftprop))+
   facet_wrap(~uniquesim, ncol = 2, nrow = 3, scales = "free")+
   theme_classic()+
-  scale_color_viridis(name = "Shiftmax \n(prop. of total dur)")+
+  theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
+  geom_density(data = summ %>% filter(type == "random"), col = "red")+
   #theme(legend.position = "none")+
   geom_vline(data = obs_summ, aes(xintercept = mnstr), linetype = 2)+
   ylab("")+xlab("Mean strength")
 ggsave(shifthistrs_str, filename = "fig/shifhistrs_str.png", width = 9, height = 8)
 
 shifthistrs_deg <- summ %>%
-  mutate(shiftprop = (2*shift)/50) %>%
   filter(type == "conveyor") %>%
   ggplot(aes(x = mndeg, group = factor(shiftprop)))+
   geom_density(aes(col = shiftprop))+
   facet_wrap(~uniquesim, ncol = 2, nrow = 3, scales = "free")+
   theme_classic()+
-  scale_color_viridis(name = "Shiftmax \n(prop. of total dur)")+
+  theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
+  geom_density(data = summ %>% filter(type == "random"), col = "red")+
   #theme(legend.position = "none")+
   geom_vline(data = obs_summ, aes(xintercept = mndeg), linetype = 2)+
   ylab("")+xlab("Mean degree")
@@ -124,7 +125,8 @@ deltas_summ <- stats_perm %>%
   summarize(mndeg = mean(degree, na.rm = T),
             sddeg = sd(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T),
-            sdstr = sd(strength, na.rm = T))
+            sdstr = sd(strength, na.rm = T)) %>%
+  mutate(shiftprop = (shift*2)/50)
 
 deltas <- deltas_summ %>%
   left_join(obs_stats_df %>% select(ID1, degree, strength, uniquesim), by = c("ID1", "uniquesim")) %>%
@@ -132,28 +134,29 @@ deltas <- deltas_summ %>%
          delta_str_zscore = (strength-mnstr)/sdstr)
 
 deltahists_deg <- deltas %>%
-  filter(!is.na(shift)) %>% # remove the random-shuffled data
-  ggplot(aes(x = delta_deg_zscore, group = factor(shift)))+
-  geom_density(aes(col = shift))+
-  scale_color_viridis()+
+  filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
+  ggplot(aes(x = delta_deg_zscore, group = factor(shiftprop)))+
+  geom_density(aes(col = shiftprop))+
+  #scale_color_viridis()+
   facet_wrap(~uniquesim, nrow = 3)+
   theme_classic()+
   geom_vline(aes(xintercept = 0))+
   # add back random-shuffled data
-  geom_density(data = deltas %>% filter(is.na(shift)), aes(x = delta_deg_zscore), col = "red")+
+  geom_density(data = deltas %>% filter(is.na(shiftprop)), 
+               aes(x = delta_deg_zscore), col = "red")+
   ylab("")+xlab("Observed degree z-score")
 ggsave(deltahists_deg, filename = "fig/deltahists_deg.png", width = 6, height = 7)
 
 deltahists_str <- deltas %>%
-  filter(!is.na(shift)) %>% # remove the random-shuffled data
-  ggplot(aes(x = delta_str_zscore, group = factor(shift)))+
-  geom_density(aes(col = shift))+
+  filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
+  ggplot(aes(x = delta_str_zscore, group = factor(shiftprop)))+
+  geom_density(aes(col = shiftprop))+
   #scale_color_viridis()+
   facet_wrap(~uniquesim, nrow = 3, scales = "free")+
   theme_classic()+
   geom_vline(aes(xintercept = 0))+
   # add back random-shuffled data
-  geom_density(data = deltas %>% filter(is.na(shift)), aes(x = delta_str_zscore), col = "red")+
+  geom_density(data = deltas %>% filter(is.na(shiftprop)), aes(x = delta_str_zscore), col = "red")+
   ylab("")+xlab("Obs - mean permuted, Strength")
 ggsave(deltahists_str, filename = "fig/deltahists_str.png", width = 6, height = 7)
 
@@ -166,12 +169,26 @@ ranked <- deltas %>%
   arrange(desc(strength), .by_group = T) %>%
   mutate(rank_str = 1:n())
 
-ranked %>%
-  filter(!is.na(shift)) %>% # remove the random-shuffled one
-  ggplot(aes(x = rank_deg, y = delta_deg, group = factor(shift)))+
-  geom_smooth(method = "lm", se = F, aes(col = shift))+
-  geom_point(aes(col = shift), size = 0.5)+
+deg_soc_z <- ranked %>%
+  filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
+  ggplot(aes(x = rank_deg, y = delta_deg_zscore, group = factor(shiftprop)))+
+  geom_smooth(method = "lm", se = F, aes(col = shiftprop))+
+  geom_point(aes(col = shiftprop), size = 0.5)+
   theme_classic()+
-  geom_point(data = ranked %>% filter(is.na(shift)), aes(x = rank_deg, y = delta_deg), col = "red", size = 0.5, pch = 4)+
-  geom_smooth(data = ranked %>% filter(is.na(shift)), aes(x = rank_deg, y = delta_deg), col = "red", method = "lm", se = F)+
-  facet_wrap(~uniquesim, nrow = 3)# should *not* set scales to "free"
+  geom_point(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", size = 0.5, pch = 4)+
+  geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", method = "lm", se = F)+
+  facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
+  ylab("Observed degree z-score") + xlab("Agent rank (degree)")
+ggsave(deg_soc_z, filename = "fig/sims_plots/deg_soz_z.png", height = 7, width = 6)
+
+str_soc_z <- ranked %>%
+  filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
+  ggplot(aes(x = rank_str, y = delta_str_zscore, group = factor(shiftprop)))+
+  geom_smooth(method = "lm", se = F, aes(col = shiftprop))+
+  geom_point(aes(col = shiftprop), size = 0.5)+
+  theme_classic()+
+  geom_point(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", size = 0.5, pch = 4)+
+  geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", method = "lm", se = F)+
+  facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
+  ylab("Observed strength z-score") + xlab("Agent rank (strength)")
+ggsave(str_soc_z, filename = "fig/sims_plots/str_soz_z.png", height = 7, width = 6)
