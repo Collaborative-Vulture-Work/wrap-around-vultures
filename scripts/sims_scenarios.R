@@ -15,27 +15,27 @@ HRStpStd <- HRStpSize*0.75 # leaving this here for now--could go back and change
 hrk <- 0.01
 hre <- 0.7
 
-sim1_ns <- simulateAgents(N = 30,
-                       Days = 50,
-                       DayLength = 50,
-                       Soc_Percep_Rng = 1000,
-                       PairedAgents = 0,
-                       PairStartDist = 0,
-                       Scl = 1000,
-                       seed = 9252023,
-                       EtaCRW = 0.7,
-                       StpSize_ind = baseAgentStep,
-                       StpStd_ind = 5,
-                       Kappa_ind = 4,
-                       ToPlot = 0,
-                       quiet = T,
-                       sim_3 = F,
-                       socialWeight = 0,
-                       HREtaCRW = 0.7,
-                       HRStpSize = HRStpSize,
-                       HRStpStd = HRStpStd,
-                       HRKappa_ind = hrk)
-save(sim1_ns, file = "data/simulations/sim1_ns.Rda")
+# sim1_ns <- simulateAgents(N = 30,
+#                        Days = 50,
+#                        DayLength = 50,
+#                        Soc_Percep_Rng = 1000,
+#                        PairedAgents = 0,
+#                        PairStartDist = 0,
+#                        Scl = 1000,
+#                        seed = 9252023,
+#                        EtaCRW = 0.7,
+#                        StpSize_ind = baseAgentStep,
+#                        StpStd_ind = 5,
+#                        Kappa_ind = 4,
+#                        ToPlot = 0,
+#                        quiet = T,
+#                        sim_3 = F,
+#                        socialWeight = 0,
+#                        HREtaCRW = 0.7,
+#                        HRStpSize = HRStpSize,
+#                        HRStpStd = HRStpStd,
+#                        HRKappa_ind = hrk)
+# save(sim1_ns, file = "data/simulations/sim1_ns.Rda")
 load("data/simulations/sim1_ns.Rda")
 
 hr <- sim1_ns$HRCent %>% as.data.frame() %>% mutate(indiv = 1:nrow(.)) %>% rename("X" = V1, "Y" = V2)
@@ -48,40 +48,44 @@ ggplot() +
   scale_color_viridis()+
   ggtitle("Scenario 1, non-sociable")
 
-p_s1_ns <- ggplot() +
-  geom_point(data = sim1_ns$XY, aes(x = X, y = Y, col = indiv), size = 0.5)+
-  #geom_point(data = hr, aes(x = X, y = Y, col = factor(indiv)), pch = 19, size = 5)+
+indivs <- sample(unique(sim1_ns$XY$indiv), 10)
+p_s1_ns <- sim1_ns$XY %>% 
+  filter(indiv %in% indivs) %>%
+  ggplot(aes(x = X, y = Y, col = indiv)) +
+  geom_point(aes(alpha = timestep))+
+  #geom_path(linewidth = 0.5)+
   theme(legend.position = "none", text = element_text(size = 10))+
   #scale_color_viridis_d()+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 1, non-sociable")
+  #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
 ggsave(p_s1_ns, file = "fig/p_s1_ns.png", width = 6, height = 7)
 
-sim1_socLevels <- map(socLevels, ~{
-  sim <- simulateAgents(N = 30,
-                           Days = 50,
-                           DayLength = 50,
-                           Soc_Percep_Rng = 1000,
-                           PairedAgents = 0,
-                           PairStartDist = 0,
-                           Scl = 1000,
-                           seed = 9252023,
-                           EtaCRW = 0.7,
-                           StpSize_ind = baseAgentStep,
-                           StpStd_ind = 5,
-                           Kappa_ind = 4,
-                           ToPlot = 0,
-                           quiet = T,
-                           sim_3 = F,
-                           socialWeight = .x,
-                           HREtaCRW = 0.7,
-                           HRStpSize = HRStpSize,
-                           HRStpStd = HRStpStd,
-                           HRKappa_ind = hrk)
-  return(sim)
-})
-save(sim1_socLevels, file = "data/simulations/sim1_socLevels.Rda")
+# sim1_socLevels <- map(socLevels, ~{
+#   sim <- simulateAgents(N = 30,
+#                            Days = 50,
+#                            DayLength = 50,
+#                            Soc_Percep_Rng = 1000,
+#                            PairedAgents = 0,
+#                            PairStartDist = 0,
+#                            Scl = 1000,
+#                            seed = 9252023,
+#                            EtaCRW = 0.7,
+#                            StpSize_ind = baseAgentStep,
+#                            StpStd_ind = 5,
+#                            Kappa_ind = 4,
+#                            ToPlot = 0,
+#                            quiet = T,
+#                            sim_3 = F,
+#                            socialWeight = .x,
+#                            HREtaCRW = 0.7,
+#                            HRStpSize = HRStpSize,
+#                            HRStpStd = HRStpStd,
+#                            HRKappa_ind = hrk)
+#   return(sim)
+# })
+# save(sim1_socLevels, file = "data/simulations/sim1_socLevels.Rda")
 
 # sim1_s <- simulateAgents(N = 30,
 #                           Days = 50,
@@ -116,16 +120,17 @@ ggplot() +
   scale_color_viridis()+
   ggtitle("Scenario 1, sociable")
 
-p_s1_s <- ggplot() +
-  geom_point(data = sim1_s$XY, aes(x = X, y = Y, col = indiv), size = 0.5)+
-  #geom_point(data = hr, aes(x = X, y = Y, col = factor(indiv)), pch = 19, size = 5)+
+indivs <- sample(unique(sim1_s$XY$indiv), 10)
+p_s1_s <- sim1_s$XY %>%
+  filter(indiv %in% indivs) %>%
+  ggplot(aes(x = X, y = Y, col = indiv)) +
+  geom_point(aes(alpha = timestep))+
   theme(legend.position = "none", text = element_text(size = 10))+
-  #scale_color_viridis_d()+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 1, sociable")
+  #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
 ggsave(p_s1_s, file = "fig/p_s1_s.png", width = 6, height = 7)
-
 
 # SIM 2 -------------------------------------------------------------------
 r <- 10 # home range steps are 10x the size of agent steps
@@ -135,27 +140,27 @@ HRStpStd <- HRStpSize*0.75 # leaving this here for now--could go back and change
 hrk <- 0.01 # effectively k = 0, random direction for home range movement.
 hre <- 0.7
 
-sim2_ns <- simulateAgents(N = 30,
-                          Days = 50,
-                          DayLength = 50,
-                          Soc_Percep_Rng = 1000,
-                          PairedAgents = 0,
-                          PairStartDist = 0,
-                          Scl = 1000,
-                          seed = 9252023,
-                          EtaCRW = 0.7,
-                          StpSize_ind = baseAgentStep,
-                          StpStd_ind = 5,
-                          Kappa_ind = 4,
-                          ToPlot = 0,
-                          quiet = T,
-                          sim_3 = T,
-                          socialWeight = 0,
-                          HREtaCRW = 0.7,
-                          HRStpSize = HRStpSize,
-                          HRStpStd = HRStpStd,
-                          HRKappa_ind = hrk)
-save(sim2_ns, file = "data/simulations/sim2_ns.Rda")
+# sim2_ns <- simulateAgents(N = 30,
+#                           Days = 50,
+#                           DayLength = 50,
+#                           Soc_Percep_Rng = 1000,
+#                           PairedAgents = 0,
+#                           PairStartDist = 0,
+#                           Scl = 1000,
+#                           seed = 9252023,
+#                           EtaCRW = 0.7,
+#                           StpSize_ind = baseAgentStep,
+#                           StpStd_ind = 5,
+#                           Kappa_ind = 4,
+#                           ToPlot = 0,
+#                           quiet = T,
+#                           sim_3 = T,
+#                           socialWeight = 0,
+#                           HREtaCRW = 0.7,
+#                           HRStpSize = HRStpSize,
+#                           HRStpStd = HRStpStd,
+#                           HRKappa_ind = hrk)
+# save(sim2_ns, file = "data/simulations/sim2_ns.Rda")
 load("data/simulations/sim2_ns.Rda")
 
 ggplot() + 
@@ -167,40 +172,41 @@ ggplot() +
   scale_color_viridis()+
   ggtitle("Scenario 2, non-sociable")
 
-p_s2_ns <- ggplot() +
-  geom_point(data = sim2_ns$XY, aes(x = X, y = Y, col = indiv), size = 0.5)+
-  #geom_point(data = sim2_ns$HRCent, aes(x = X, y = Y, col = indiv), pch = 19, size = 5)+
+indivs <- sample(unique(sim2_ns$XY$indiv), 10)
+p_s2_ns <- sim2_ns$XY %>%
+  filter(indiv %in% indivs) %>%
+  ggplot(aes(x = X, y = Y, col = indiv)) +
+  geom_point(aes(alpha = timestep))+
   theme(legend.position = "none", text = element_text(size = 10))+
-  #scale_color_viridis_d()+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 2, non-sociable")
 ggsave(p_s2_ns, file = "fig/p_s2_ns.png", width = 6, height = 7)
 
-sim2_socLevels <- map(socLevels, ~{
-  sim <- simulateAgents(N = 30,
-                 Days = 50,
-                 DayLength = 50,
-                 Soc_Percep_Rng = 1000,
-                 PairedAgents = 0,
-                 PairStartDist = 0,
-                 Scl = 1000,
-                 seed = 9252023,
-                 EtaCRW = 0.7,
-                 StpSize_ind = baseAgentStep,
-                 StpStd_ind = 5,
-                 Kappa_ind = 4,
-                 ToPlot = 0,
-                 quiet = T,
-                 sim_3 = T,
-                 socialWeight = .x,
-                 HREtaCRW = 0.7,
-                 HRStpSize = HRStpSize,
-                 HRStpStd = HRStpStd,
-                 HRKappa_ind = hrk)
-  return(sim)
-})
-save(sim2_socLevels, file = "data/simulations/sim2_socLevels.Rda")
+# sim2_socLevels <- map(socLevels, ~{
+#   sim <- simulateAgents(N = 30,
+#                  Days = 50,
+#                  DayLength = 50,
+#                  Soc_Percep_Rng = 1000,
+#                  PairedAgents = 0,
+#                  PairStartDist = 0,
+#                  Scl = 1000,
+#                  seed = 9252023,
+#                  EtaCRW = 0.7,
+#                  StpSize_ind = baseAgentStep,
+#                  StpStd_ind = 5,
+#                  Kappa_ind = 4,
+#                  ToPlot = 0,
+#                  quiet = T,
+#                  sim_3 = T,
+#                  socialWeight = .x,
+#                  HREtaCRW = 0.7,
+#                  HRStpSize = HRStpSize,
+#                  HRStpStd = HRStpStd,
+#                  HRKappa_ind = hrk)
+#   return(sim)
+# })
+# save(sim2_socLevels, file = "data/simulations/sim2_socLevels.Rda")
 
 # sim2_s <- simulateAgents(N = 30,
 #                           Days = 50,
@@ -234,11 +240,12 @@ ggplot() +
   scale_color_viridis()+
   ggtitle("Scenario 2, sociable")
 
-p_s2_s <- ggplot() +
-  geom_point(data = sim2_s$XY, aes(x = X, y = Y, col = indiv), size = 0.5)+
-  #geom_point(data = sim2_s$HRCent, aes(x = X, y = Y, col = indiv), pch = 19, size = 5)+
+indivs <- sample(unique(sim2_s$XY$indiv), 10)
+p_s2_s <- sim2_s$XY %>% 
+  filter(indiv %in% indivs) %>%
+  ggplot(aes(x = X, y = Y, col = indiv)) +
+  geom_point(aes(alpha = timestep))+
   theme(legend.position = "none", text = element_text(size = 10))+
-  #scale_color_viridis_d()+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 2, sociable")
@@ -252,27 +259,27 @@ HRStpStd <- HRStpSize*0.75 # leaving this here for now--could go back and change
 hrk <- 20 # k = 20, highly directional
 hre <- 0.7
 
-sim3_ns <- simulateAgents(N = 30,
-                          Days = 50,
-                          DayLength = 50,
-                          Soc_Percep_Rng = 1000,
-                          PairedAgents = 0,
-                          PairStartDist = 0,
-                          Scl = 1000,
-                          seed = 9252023,
-                          EtaCRW = 0.7,
-                          StpSize_ind = baseAgentStep,
-                          StpStd_ind = 5,
-                          Kappa_ind = 4,
-                          ToPlot = 0,
-                          quiet = T,
-                          sim_3 = T,
-                          socialWeight = 0,
-                          HREtaCRW = 0.7,
-                          HRStpSize = HRStpSize,
-                          HRStpStd = HRStpStd,
-                          HRKappa_ind = hrk)
-save(sim3_ns, file = "data/simulations/sim3_ns.Rda")
+# sim3_ns <- simulateAgents(N = 30,
+#                           Days = 50,
+#                           DayLength = 50,
+#                           Soc_Percep_Rng = 1000,
+#                           PairedAgents = 0,
+#                           PairStartDist = 0,
+#                           Scl = 1000,
+#                           seed = 9252023,
+#                           EtaCRW = 0.7,
+#                           StpSize_ind = baseAgentStep,
+#                           StpStd_ind = 5,
+#                           Kappa_ind = 4,
+#                           ToPlot = 0,
+#                           quiet = T,
+#                           sim_3 = T,
+#                           socialWeight = 0,
+#                           HREtaCRW = 0.7,
+#                           HRStpSize = HRStpSize,
+#                           HRStpStd = HRStpStd,
+#                           HRKappa_ind = hrk)
+# save(sim3_ns, file = "data/simulations/sim3_ns.Rda")
 load("data/simulations/sim3_ns.Rda")
 
 ggplot() + 
@@ -284,40 +291,41 @@ ggplot() +
   scale_color_viridis()+
   ggtitle("Scenario 3, non-sociable")
 
-p_s3_ns <- ggplot() +
-  geom_point(data = sim3_ns$XY, aes(x = X, y = Y, col = indiv), size = 0.5)+
-  #geom_point(data = sim3_ns$HRCent, aes(x = X, y = Y, col = indiv), pch = 19, size = 5)+
+indivs <- sample(unique(sim3_ns$XY$indiv), 10)
+p_s3_ns <- sim3_ns$XY %>%
+  filter(indiv %in% indivs) %>%
+  ggplot(aes(x = X, y = Y, col = indiv)) +
+  geom_point(aes(alpha = timestep))+
   theme(legend.position = "none", text = element_text(size = 10))+
-  #scale_color_viridis_d()+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, non-sociable")
 ggsave(p_s3_ns, file = "fig/p_s3_ns.png", width = 7, height = 6)
 
-sim3_socLevels <- map(socLevels, ~{
-  sim3 <- simulateAgents(N = 30,
-                           Days = 50,
-                           DayLength = 50,
-                           Soc_Percep_Rng = 1000,
-                           PairedAgents = 0,
-                           PairStartDist = 0,
-                           Scl = 1000,
-                           seed = 9252023,
-                           EtaCRW = 0.7,
-                           StpSize_ind = baseAgentStep,
-                           StpStd_ind = 5,
-                           Kappa_ind = 4,
-                           ToPlot = 0,
-                           quiet = T,
-                           sim_3 = T,
-                           socialWeight = .x,
-                           HREtaCRW = 0.7,
-                           HRStpSize = HRStpSize,
-                           HRStpStd = HRStpStd,
-                           HRKappa_ind = hrk)
-  return(sim)
-})
-save(sim3_socLevels, file = "data/simulations/sim3_socLevels.Rda")
+# sim3_socLevels <- map(socLevels, ~{
+#   sim3 <- simulateAgents(N = 30,
+#                            Days = 50,
+#                            DayLength = 50,
+#                            Soc_Percep_Rng = 1000,
+#                            PairedAgents = 0,
+#                            PairStartDist = 0,
+#                            Scl = 1000,
+#                            seed = 9252023,
+#                            EtaCRW = 0.7,
+#                            StpSize_ind = baseAgentStep,
+#                            StpStd_ind = 5,
+#                            Kappa_ind = 4,
+#                            ToPlot = 0,
+#                            quiet = T,
+#                            sim_3 = T,
+#                            socialWeight = .x,
+#                            HREtaCRW = 0.7,
+#                            HRStpSize = HRStpSize,
+#                            HRStpStd = HRStpStd,
+#                            HRKappa_ind = hrk)
+#   return(sim)
+# })
+# save(sim3_socLevels, file = "data/simulations/sim3_socLevels.Rda")
 
 # sim3_s <- simulateAgents(N = 30,
 #                          Days = 50,
@@ -350,11 +358,12 @@ ggplot() +
   scale_color_viridis()+
   ggtitle("Scenario 3, sociable")
 
-p_s3_s <- ggplot() +
-  geom_point(data = sim3_s$XY, aes(x = X, y = Y, col = indiv), size = 0.5)+
-  # geom_point(data = sim3_s$HRCent, aes(x = X, y = Y, col = indiv), pch = 19, size = 5)+
+indivs <- sample(unique(sim3_s$XY$indiv), 10)
+p_s3_s <- sim3_s$XY %>%
+  filter(indiv %in% indivs) %>%
+  ggplot(aes(x = X, y = Y, col = indiv)) +
+  geom_point(aes(alpha = timestep))+
   theme(legend.position = "none", text = element_text(size = 10))+
-  #scale_color_viridis_d()+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, sociable")
