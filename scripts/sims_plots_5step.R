@@ -2,7 +2,7 @@ library(tidyverse)
 library(viridis)
 load("data/simulations/stats_perm_5step.Rda")
 load("data/simulations/obs_stats_df_5step.Rda")
-days <- 25
+days <- 50
 
 # 5. Make plot ---------------------------------------------------------------
 uniquesims <- unique(obs_stats_df_5step$uniquesim)
@@ -113,7 +113,7 @@ shifthistrs_deg_5step <- summ_5step %>%
   facet_wrap(~uniquesim, ncol = 2, nrow = 3, scales = "free")+
   theme_classic()+
   theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
-  geom_density(data = summ %>% filter(type == "random"), col = "red")+
+  geom_density(data = summ_5step %>% filter(type == "random"), col = "red")+
   #theme(legend.position = "none")+
   geom_vline(data = obs_summ_5step, aes(xintercept = mndeg), linetype = 2)+
   ylab("")+xlab("Mean degree")
