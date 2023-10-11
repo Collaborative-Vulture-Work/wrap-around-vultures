@@ -5,6 +5,7 @@ load("data/simulations/obs_stats_df_5step.Rda")
 
 # 5. Make plot ---------------------------------------------------------------
 uniquesims <- unique(obs_stats_df_5step$uniquesim)
+whichshift <- 5
 # 6-panel boxplot: strength
 plots <- vector(mode = "list", length = length(uniquesims))
 for(i in 1:length(uniquesims)){
@@ -19,7 +20,7 @@ for(i in 1:length(uniquesims)){
     mutate(ID1 = factor(ID1, levels = ord))
   datperm <- stats_perm_5step %>%
     filter(uniquesim == usim,
-           shift %in% c(2, NA)) %>%
+           shift %in% c(whichshift, NA)) %>%
     mutate(ID1 = factor(ID1, levels = ord))
   
   # Make the plot
@@ -56,7 +57,7 @@ for(i in 1:length(uniquesims)){
     mutate(ID1 = factor(ID1, levels = ord))
   datperm <- stats_perm_5step %>%
     filter(uniquesim == usim,
-           shift %in% c(2, NA)) %>%
+           shift %in% c(whichshift, NA)) %>%
     mutate(ID1 = factor(ID1, levels = ord))
   
   # Make the plot
@@ -84,7 +85,7 @@ summ_5step <- stats_perm_5step %>%
   group_by(uniquesim, type, iteration, shift) %>%
   summarize(mndeg = mean(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T)) %>%
-  mutate(shiftprop = (2*shift)/50)
+  mutate(shiftprop = (2*shift)/max(stats_perm_5step$iteration))
 obs_summ_5step <- obs_stats_df_5step %>%
   group_by(uniquesim) %>%
   summarize(mndeg = mean(degree, na.rm = T),
@@ -126,7 +127,7 @@ deltas_summ_5step <- stats_perm_5step %>%
             sddeg = sd(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T),
             sdstr = sd(strength, na.rm = T)) %>%
-  mutate(shiftprop = (shift*2)/50)
+  mutate(shiftprop = (shift*2)/max(stats_perm_5step$iteration))
 
 deltas_5step <- deltas_summ_5step %>%
   left_join(obs_stats_df_5step %>% select(ID1, degree, strength, uniquesim), by = c("ID1", "uniquesim")) %>%
