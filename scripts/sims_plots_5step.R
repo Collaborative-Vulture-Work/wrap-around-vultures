@@ -2,6 +2,7 @@ library(tidyverse)
 library(viridis)
 load("data/simulations/stats_perm_5step.Rda")
 load("data/simulations/obs_stats_df_5step.Rda")
+days <- 25
 
 # 5. Make plot ---------------------------------------------------------------
 uniquesims <- unique(obs_stats_df_5step$uniquesim)
@@ -85,7 +86,7 @@ summ_5step <- stats_perm_5step %>%
   group_by(uniquesim, type, iteration, shift) %>%
   summarize(mndeg = mean(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T)) %>%
-  mutate(shiftprop = (2*shift)/max(stats_perm_5step$iteration))
+  mutate(shiftprop = (2*shift)/days)
 obs_summ_5step <- obs_stats_df_5step %>%
   group_by(uniquesim) %>%
   summarize(mndeg = mean(degree, na.rm = T),
@@ -127,7 +128,7 @@ deltas_summ_5step <- stats_perm_5step %>%
             sddeg = sd(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T),
             sdstr = sd(strength, na.rm = T)) %>%
-  mutate(shiftprop = (shift*2)/max(stats_perm_5step$iteration))
+  mutate(shiftprop = (shift*2)/days)
 
 deltas_5step <- deltas_summ_5step %>%
   left_join(obs_stats_df_5step %>% select(ID1, degree, strength, uniquesim), by = c("ID1", "uniquesim")) %>%
