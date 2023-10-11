@@ -10,7 +10,7 @@ week_data <- month_data %>%
 mask <- sf::st_read("data/CutoffRegion.kml")
 week_data <- vultureUtils::cleanData(week_data, mask, idCol = "trackId")
 
-# week_data <- week_data[c("trackId", "timestamp", "location_long.1", "location_lat.1")]
+
 
 week_data$date <- lubridate::date(week_data$timestamp)
 week_data$time <- stringr::str_extract(week_data$timestamp, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
