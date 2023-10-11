@@ -34,10 +34,10 @@ sims_xy_5step <- map(sims_xy_5step, ~.x %>% mutate(date = lubridate::date(dateti
 
 
 # PERMUTATIONS ------------------------------------------------------------
-n <- 50 # how many permutations?
+n <- 25 # how many permutations?
 
 # Conveyor permutations ---------------------------------------------------
-sms <- seq(from = 1, to = 25, by = 1)
+sms <- seq(from = 1, to = 25, by = 2)
 
 sms_sims_conveyor_5step <- vector(mode = "list", length = length(sms))
 for(i in 1:length(sms)){
