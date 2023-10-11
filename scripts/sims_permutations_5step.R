@@ -15,20 +15,20 @@ simulations <- rep(1:3, each = 2)
 soc_nonsoc <- rep(c("ns", "s"), 3)
 
 # Make a list
-sims <- list(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)
+sims_5step <- list(sim1_ns_5step, sim1_s_5step, sim2_ns_5step, sim2_s_5step, sim3_ns_5step, sim3_s_5step)
 
 # Extract just the XY coordinates
-sims_xy <- map(sims, "XY")
+sims_xy_5step <- map(sims_5step, "XY")
 
 # Fix the times for each one
-sims_xy <- map(sims_xy, fix_times)
+sims_xy_5step <- map(sims_xy_5step, fix_times)
 
 # Label the simulation data
-sims_xy <- map2(sims_xy, simulations, ~.x %>% mutate(sim = .y))
-sims_xy <- map2(sims_xy, soc_nonsoc, ~.x %>% mutate(sns = .y))
+sims_xy_5step <- map2(sims_xy_5step, simulations, ~.x %>% mutate(sim = .y))
+sims_xy_5step <- map2(sims_xy_5step, soc_nonsoc, ~.x %>% mutate(sns = .y))
 
 # Create separate date and time columns
-sims_xy <- map(sims_xy, ~.x %>% mutate(date = lubridate::date(datetime),
+sims_xy_5step <- map(sims_xy_5step, ~.x %>% mutate(date = lubridate::date(datetime),
                                        time = stringr::str_extract(datetime, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}"),
                                        time = tidyr::replace_na(time, "00:00:00")))
 
@@ -39,31 +39,31 @@ n <- 50 # how many permutations?
 # Conveyor permutations ---------------------------------------------------
 sms <- seq(from = 1, to = 25, by = 1)
 
-sms_sims_conveyor <- vector(mode = "list", length = length(sms))
+sms_sims_conveyor_5step <- vector(mode = "list", length = length(sms))
 for(i in 1:length(sms)){
   shift <- sms[i]
   cat("shiftmax = ", shift, "\n")
-  sims_conveyor <- map(sims_xy, ~{
-    realizations <- vector(mode = "list", length = n)
+  sims_conveyor_5step <- map(sims_xy_5step, ~{
+    realizations_5step <- vector(mode = "list", length = n)
     for(j in 1:n){
       cat(".")
-      realizations[[j]] <- rotate_data_table(dataset = .x, shiftMax = shift,
+      realizations_5step[[j]] <- rotate_data_table(dataset = .x, shiftMax = shift,
                                              idCol = "indiv", dateCol = "date",
                                              timeCol = "time")
     }
     cat("\n")
-    return(realizations)
+    return(realizations_5step)
   })
-  sms_sims_conveyor[[i]] <- sims_conveyor
+  sms_sims_conveyor_5step[[i]] <- sims_conveyor_5step
 }
-save(sms_sims_conveyor, file = "data/simulations/sms_sims_conveyor.Rda")
-load("data/simulations/sms_sims_conveyor.Rda")
+save(sms_sims_conveyor_5step, file = "data/simulations/sms_sims_conveyor_5step.Rda")
+load("data/simulations/sms_sims_conveyor_5step.Rda")
 
 # Random permutations -----------------------------------------------------
-sims_xy_dt <- map(sims_xy, setDT) # make them into data tables so we can use the spatsoc function properly
-sims_xy_dt <- map(sims_xy_dt, ~.x %>% mutate(datetime = as.POSIXct(datetime)))
+sims_xy_dt_5step <- map(sims_xy_5step, setDT) # make them into data tables so we can use the spatsoc function properly
+sims_xy_dt_5step <- map(sims_xy_dt_5step, ~.x %>% mutate(datetime = as.POSIXct(datetime)))
 
-sims_random <- map(sims_xy_dt, ~{
+sims_random_5step <- map(sims_xy_dt_5step, ~{
   r <- spatsoc::randomizations(DT = .x, type = "trajectory", id = "indiv",
                                datetime = "datetime", coords = c("X", "Y"),
                                iterations = n) %>%
@@ -73,26 +73,26 @@ sims_random <- map(sims_xy_dt, ~{
   cat("*")
   return(r)
 })
-save(sims_random, file = "data/simulations/sims_random.Rda")
-load("data/simulations/sims_random.Rda")
+save(sims_random_5step, file = "data/simulations/sims_random_5step.Rda")
+load("data/simulations/sims_random_5step.Rda")
 
 
 # STATS -------------------------------------------------------------------
 # 1. observed simulations
-obs_stats <- map(sims_xy,
+obs_stats_5step <- map(sims_xy_5step,
                  ~get_stats(data = .x,
                             edgelist = get_edgelist(.x, idCol = "indiv",
                                                     dateCol = "datetime")))
 # Label the stats
-obs_stats <- map2(obs_stats, simulations, ~.x %>% mutate(sim = .y))
-obs_stats <- map2(obs_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
-obs_stats_df <- obs_stats %>% purrr::list_rbind() %>%
+obs_stats_5step <- map2(obs_stats_5step, simulations, ~.x %>% mutate(sim = .y))
+obs_stats_5step <- map2(obs_stats_5step, soc_nonsoc, ~.x %>% mutate(sns = .y))
+obs_stats_df_5step <- obs_stats_5step %>% purrr::list_rbind() %>%
   mutate(uniquesim = paste(sim, sns, sep = "_"))
-save(obs_stats_df, file = "data/simulations/obs_stats_df.Rda")
-load("data/simulations/obs_stats_df.Rda")
+save(obs_stats_df_5step, file = "data/simulations/obs_stats_df_5step.Rda")
+load("data/simulations/obs_stats_df_5step.Rda")
 
 # 2. conveyor permutations
-stats_shifts <- map(sms_sims_conveyor, ~{
+stats_shifts_5step <- map(sms_sims_conveyor_5step, ~{
   simulations <- .x
   stats_simulations <- map(simulations, ~{
     iterations <- .x
@@ -109,36 +109,36 @@ names(sms) <- as.character(1:length(sms))
 names(simulations) <- as.character(1:length(simulations))
 names(soc_nonsoc) <- as.character(1:length(soc_nonsoc))
 
-sms_conveyor_stats_df <- stats_shifts %>%
+sms_conveyor_stats_df_5step <- stats_shifts_5step %>%
   mutate(shift = sms[as.character(shift)],
          sim = simulations[as.character(simulation)],
          sns = soc_nonsoc[as.character(simulation)]) %>%
   select(-simulation)
 
-save(sms_conveyor_stats_df, file = "data/simulations/sms_conveyor_stats_df.Rda")
-load("data/simulations/sms_conveyor_stats_df.Rda")
+save(sms_conveyor_stats_df_5step, file = "data/simulations/sms_conveyor_stats_df_5step.Rda")
+load("data/simulations/sms_conveyor_stats_df_5step.Rda")
 
 # 3. random permutations
-random_stats <- vector(mode = "list", length = length(sims_random))
-for(i in 1:length(sims_random)){
-  edges <- map(sims_random[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
-  stats <- map2(.x = sims_random[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
+random_stats_5step <- vector(mode = "list", length = length(sims_random_5step))
+for(i in 1:length(sims_random_5step)){
+  edges <- map(sims_random_5step[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
+  stats_5step <- map2(.x = sims_random_5step[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
     purrr::list_rbind(names_to = "iteration")
-  random_stats[[i]] <- stats
+  random_stats_5step[[i]] <- stats_5step
 }
-save(random_stats, file = "data/simulations/random_stats.Rda")
-load("data/simulations/random_stats.Rda")
+save(random_stats_5step, file = "data/simulations/random_stats_5step.Rda")
+load("data/simulations/random_stats_5step.Rda")
 
 # Label the stats
-random_stats <- map2(random_stats, simulations, ~.x %>% mutate(sim = .y))
-random_stats <- map2(random_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
-random_stats_df <- random_stats %>% purrr::list_rbind()
-save(random_stats_df, file = "data/simulations/random_stats_df.Rda")
-load("data/simulations/random_stats_df.Rda")
+random_stats_5step <- map2(random_stats_5step, simulations, ~.x %>% mutate(sim = .y))
+random_stats_5step <- map2(random_stats_5step, soc_nonsoc, ~.x %>% mutate(sns = .y))
+random_stats_df_5step <- random_stats_5step %>% purrr::list_rbind()
+save(random_stats_df_5step, file = "data/simulations/random_stats_df_5step.Rda")
+load("data/simulations/random_stats_df_5step.Rda")
 
 # Combine all the stats
-stats_perm <- sms_conveyor_stats_df %>% mutate(type = "conveyor") %>%
-  bind_rows(random_stats_df %>% mutate(type = "random")) %>%
+stats_perm_5step <- sms_conveyor_stats_df_5step %>% mutate(type = "conveyor") %>%
+  bind_rows(random_stats_df_5step %>% mutate(type = "random")) %>%
   mutate(uniquesim = paste(sim, sns, sep = "_"))
-save(stats_perm, file = "data/simulations/stats_perm.Rda")
-load("data/simulations/stats_perm.Rda")
+save(stats_perm_5step, file = "data/simulations/stats_perm_5step.Rda")
+load("data/simulations/stats_perm_5step.Rda")
