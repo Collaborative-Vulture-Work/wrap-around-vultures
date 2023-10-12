@@ -4,7 +4,11 @@
 # Scenario 3: directionally-moving home ranges
 source("scripts/functions.R")
 library(tidyverse)
+library(viridis)
 socLevels <- seq(from = 0, to = 1, by = 0.1)
+library(Polychrome)
+tencolors <- kelly.colors(13)[-1][-1][-7] # remove white and black and gray
+swatch(tencolors)
 
 
 # SIM 1 -------------------------------------------------------------------
@@ -51,15 +55,18 @@ ggplot() +
 indivs <- sample(unique(sim1_ns$XY$indiv), 10)
 p_s1_ns <- sim1_ns$XY %>% 
   filter(indiv %in% indivs) %>%
-  ggplot(aes(x = X, y = Y, col = indiv)) +
-  geom_point(aes(alpha = timestep))+
-  #geom_path(linewidth = 0.5)+
+  ggplot() +
+  geom_path(data = sim1_ns$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.1)+
+  geom_path(aes(x = X, y = Y, col = indiv), 
+            linewidth = 1, alpha = 0.9)+
   theme(legend.position = "none", text = element_text(size = 10))+
-  #scale_color_viridis_d()+
+  scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 1, non-sociable")
-  #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
+#geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
 ggsave(p_s1_ns, file = "fig/p_s1_ns.png", width = 6, height = 7)
 
 # sim1_socLevels <- map(socLevels, ~{
@@ -123,13 +130,18 @@ ggplot() +
 indivs <- sample(unique(sim1_s$XY$indiv), 10)
 p_s1_s <- sim1_s$XY %>%
   filter(indiv %in% indivs) %>%
-  ggplot(aes(x = X, y = Y, col = indiv)) +
-  geom_point(aes(alpha = timestep))+
+  ggplot()+
+  geom_path(data = sim1_s$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.1)+
+  geom_path(aes(x = X, y = Y, col = indiv),
+            linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", text = element_text(size = 10))+
+  scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 1, sociable")
-  #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
+#geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
 ggsave(p_s1_s, file = "fig/p_s1_s.png", width = 6, height = 7)
 
 # SIM 2 -------------------------------------------------------------------
@@ -175,9 +187,14 @@ ggplot() +
 indivs <- sample(unique(sim2_ns$XY$indiv), 10)
 p_s2_ns <- sim2_ns$XY %>%
   filter(indiv %in% indivs) %>%
-  ggplot(aes(x = X, y = Y, col = indiv)) +
-  geom_point(aes(alpha = timestep))+
+  ggplot()+
+  geom_path(data = sim2_ns$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.1)+
+  geom_path(aes(x = X, y = Y, col = indiv),
+            linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", text = element_text(size = 10))+
+  scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 2, non-sociable")
@@ -241,11 +258,16 @@ ggplot() +
   ggtitle("Scenario 2, sociable")
 
 indivs <- sample(unique(sim2_s$XY$indiv), 10)
-p_s2_s <- sim2_s$XY %>% 
+p_s2_s <- sim2_s$XY %>%
   filter(indiv %in% indivs) %>%
-  ggplot(aes(x = X, y = Y, col = indiv)) +
-  geom_point(aes(alpha = timestep))+
+  ggplot()+
+  geom_path(data = sim2_s$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.1)+
+  geom_path(aes(x = X, y = Y, col = indiv),
+            linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", text = element_text(size = 10))+
+  scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 2, sociable")
@@ -294,9 +316,14 @@ ggplot() +
 indivs <- sample(unique(sim3_ns$XY$indiv), 10)
 p_s3_ns <- sim3_ns$XY %>%
   filter(indiv %in% indivs) %>%
-  ggplot(aes(x = X, y = Y, col = indiv)) +
-  geom_point(aes(alpha = timestep))+
+  ggplot()+
+  geom_path(data = sim3_ns$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.1)+
+  geom_path(aes(x = X, y = Y, col = indiv),
+            linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", text = element_text(size = 10))+
+  scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, non-sociable")
@@ -361,10 +388,27 @@ ggplot() +
 indivs <- sample(unique(sim3_s$XY$indiv), 10)
 p_s3_s <- sim3_s$XY %>%
   filter(indiv %in% indivs) %>%
-  ggplot(aes(x = X, y = Y, col = indiv)) +
-  geom_point(aes(alpha = timestep))+
+  ggplot()+
+  geom_path(data = sim3_s$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.1)+
+  geom_path(aes(x = X, y = Y, col = indiv),
+            linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", text = element_text(size = 10))+
+  scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, sociable")
-ggsave(p_s3_ns, file = "fig/p_s3_s.png", width = 7, height = 6)
+ggsave(p_s3_s, file = "fig/p_s3_s.png", width = 7, height = 6)
+
+# Put all 6 plots together, removing their titles
+a <- p_s1_ns + theme(title = element_blank())
+b <- p_s1_s + theme(title = element_blank())
+c <- p_s2_ns + theme(title = element_blank())
+d <- p_s2_s + theme(title = element_blank())
+e <- p_s3_ns + theme(title = element_blank())
+f <- p_s3_s + theme(title = element_blank())
+trajectories_patchwork <- ((a+b)/(c+d)/(e+f))+
+  theme(text = element_text('mono', size = 15))
+trajectories_patchwork
+ggsave(trajectories_patchwork, filename = "fig/trajectories_patchwork.png", width = 11, height = 16)
