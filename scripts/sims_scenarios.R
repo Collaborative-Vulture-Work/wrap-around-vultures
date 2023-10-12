@@ -94,27 +94,27 @@ ggsave(p_s1_ns, file = "fig/p_s1_ns.png", width = 6, height = 7)
 # })
 # save(sim1_socLevels, file = "data/simulations/sim1_socLevels.Rda")
 
-# sim1_s <- simulateAgents(N = 30,
-#                           Days = 50,
-#                           DayLength = 50,
-#                           Soc_Percep_Rng = 1000,
-#                           PairedAgents = 0,
-#                           PairStartDist = 0,
-#                           Scl = 1000,
-#                           seed = 9252023,
-#                           EtaCRW = 0.7,
-#                           StpSize_ind = baseAgentStep,
-#                           StpStd_ind = 5,
-#                           Kappa_ind = 4,
-#                           ToPlot = 0,
-#                           quiet = T,
-#                           sim_3 = F,
-#                           socialWeight = 0.5,
-#                           HREtaCRW = 0.7,
-#                           HRStpSize = HRStpSize,
-#                           HRStpStd = HRStpStd,
-#                           HRKappa_ind = hrk)
-# save(sim1_s, file = "data/simulations/sim1_s.Rda")
+sim1_s <- simulateAgents(N = 30,
+                          Days = 50,
+                          DayLength = 50,
+                          Soc_Percep_Rng = 1000,
+                          PairedAgents = 0,
+                          PairStartDist = 0,
+                          Scl = 1000,
+                          seed = 9252023,
+                          EtaCRW = 0.7,
+                          StpSize_ind = baseAgentStep,
+                          StpStd_ind = 5,
+                          Kappa_ind = 4,
+                          ToPlot = 0,
+                          quiet = T,
+                          sim_3 = F,
+                          socialWeight = 0.75,
+                          HREtaCRW = 0.7,
+                          HRStpSize = HRStpSize,
+                          HRStpStd = HRStpStd,
+                          HRKappa_ind = hrk)
+save(sim1_s, file = "data/simulations/sim1_s.Rda")
 load("data/simulations/sim1_s.Rda")
 
 hr <- sim1_s$HRCent %>% as.data.frame() %>% mutate(indiv = 1:nrow(.)) %>% rename("X" = V1, "Y" = V2)
@@ -225,27 +225,27 @@ ggsave(p_s2_ns, file = "fig/p_s2_ns.png", width = 6, height = 7)
 # })
 # save(sim2_socLevels, file = "data/simulations/sim2_socLevels.Rda")
 
-# sim2_s <- simulateAgents(N = 30,
-#                           Days = 50,
-#                           DayLength = 50,
-#                           Soc_Percep_Rng = 1000,
-#                           PairedAgents = 0,
-#                           PairStartDist = 0,
-#                           Scl = 1000,
-#                           seed = 9252023,
-#                           EtaCRW = 0.7,
-#                           StpSize_ind = baseAgentStep,
-#                           StpStd_ind = 5,
-#                           Kappa_ind = 4,
-#                           ToPlot = 0,
-#                           quiet = T,
-#                           sim_3 = T,
-#                           socialWeight = 0.5,
-#                           HREtaCRW = 0.7,
-#                           HRStpSize = HRStpSize,
-#                           HRStpStd = HRStpStd,
-#                           HRKappa_ind = hrk)
-# save(sim2_s, file = "data/simulations/sim2_s.Rda")
+sim2_s <- simulateAgents(N = 30,
+                          Days = 50,
+                          DayLength = 50,
+                          Soc_Percep_Rng = 1000,
+                          PairedAgents = 0,
+                          PairStartDist = 0,
+                          Scl = 1000,
+                          seed = 9252023,
+                          EtaCRW = 0.7,
+                          StpSize_ind = baseAgentStep,
+                          StpStd_ind = 5,
+                          Kappa_ind = 4,
+                          ToPlot = 0,
+                          quiet = T,
+                          sim_3 = T,
+                          socialWeight = 0.75,
+                          HREtaCRW = 0.7,
+                          HRStpSize = HRStpSize,
+                          HRStpStd = HRStpStd,
+                          HRKappa_ind = hrk)
+save(sim2_s, file = "data/simulations/sim2_s.Rda")
 load("data/simulations/sim2_s.Rda")
 
 ggplot() + 
@@ -354,27 +354,27 @@ ggsave(p_s3_ns, file = "fig/p_s3_ns.png", width = 7, height = 6)
 # })
 # save(sim3_socLevels, file = "data/simulations/sim3_socLevels.Rda")
 
-# sim3_s <- simulateAgents(N = 30,
-#                          Days = 50,
-#                          DayLength = 50,
-#                          Soc_Percep_Rng = 1000,
-#                          PairedAgents = 0,
-#                          PairStartDist = 0,
-#                          Scl = 1000,
-#                          seed = 9252023,
-#                          EtaCRW = 0.7,
-#                          StpSize_ind = baseAgentStep,
-#                          StpStd_ind = 5,
-#                          Kappa_ind = 4,
-#                          ToPlot = 0,
-#                          quiet = T,
-#                          sim_3 = T,
-#                          socialWeight = 0.5,
-#                          HREtaCRW = 0.7,
-#                          HRStpSize = HRStpSize,
-#                          HRStpStd = HRStpStd,
-#                          HRKappa_ind = hrk)
-# save(sim3_s, file = "data/simulations/sim3_s.Rda")
+sim3_s <- simulateAgents(N = 30,
+                         Days = 50,
+                         DayLength = 50,
+                         Soc_Percep_Rng = 1000,
+                         PairedAgents = 0,
+                         PairStartDist = 0,
+                         Scl = 1000,
+                         seed = 9252023,
+                         EtaCRW = 0.7,
+                         StpSize_ind = baseAgentStep,
+                         StpStd_ind = 5,
+                         Kappa_ind = 4,
+                         ToPlot = 0,
+                         quiet = T,
+                         sim_3 = T,
+                         socialWeight = 0.75,
+                         HREtaCRW = 0.7,
+                         HRStpSize = HRStpSize,
+                         HRStpStd = HRStpStd,
+                         HRKappa_ind = hrk)
+save(sim3_s, file = "data/simulations/sim3_s.Rda")
 load("data/simulations/sim3_s.Rda")
 
 ggplot() + 
