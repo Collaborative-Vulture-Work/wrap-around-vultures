@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 data/simulations/
+.DS_Store
