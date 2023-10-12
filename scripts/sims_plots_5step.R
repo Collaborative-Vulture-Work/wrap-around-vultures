@@ -144,7 +144,7 @@ deltahists_deg_5step <- deltas_5step %>%
   theme_classic()+
   geom_vline(aes(xintercept = 0))+
   # add back random-shuffled data
-  geom_density(data = deltas %>% filter(is.na(shiftprop)), 
+  geom_density(data = deltas_5step %>% filter(is.na(shiftprop)), 
                aes(x = delta_deg_zscore), col = "red")+
   ylab("")+xlab("Observed degree z-score")
 ggsave(deltahists_deg_5step, filename = "fig/sims_plots/deltahists_deg_5step.png", width = 6, height = 7)
@@ -158,7 +158,7 @@ deltahists_str_5step <- deltas_5step %>%
   theme_classic()+
   geom_vline(aes(xintercept = 0))+
   # add back random-shuffled data
-  geom_density(data = deltas %>% filter(is.na(shiftprop)), aes(x = delta_str_zscore), col = "red")+
+  geom_density(data = deltas_5step %>% filter(is.na(shiftprop)), aes(x = delta_str_zscore), col = "red")+
   ylab("")+xlab("Obs - mean permuted, Strength")
 ggsave(deltahists_str_5step, filename = "fig/sims_plots/deltahists_str_5step.png", width = 6, height = 7)
 
