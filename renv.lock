@@ -232,17 +232,6 @@
       ],
       "Hash": "5edeac24efc71fca9936ac6f3ea4ef6c"
     },
-    "animation": {
-      "Package": "animation",
-      "Version": "2.7",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "R",
-        "magick"
-      ],
-      "Hash": "b44dfd6eca87dd78c1b8acc67887c615"
-    },
     "askpass": {
       "Package": "askpass",
       "Version": "1.2.0",
@@ -532,7 +521,7 @@
     },
     "dbplyr": {
       "Package": "dbplyr",
-      "Version": "2.3.4",
+      "Version": "2.3.3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -556,7 +545,7 @@
         "vctrs",
         "withr"
       ],
-      "Hash": "63534894354af6b2587b7aa518a5193a"
+      "Hash": "d6fd1b1440c1cacc6623aaa4e9fe352b"
     },
     "digest": {
       "Package": "digest",
@@ -571,7 +560,7 @@
     },
     "dplyr": {
       "Package": "dplyr",
-      "Version": "1.1.3",
+      "Version": "1.1.2",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -590,7 +579,7 @@
         "utils",
         "vctrs"
       ],
-      "Hash": "e85ffbebaad5f70e1a2e2ef4302b4949"
+      "Hash": "dea6970ff715ca541c387de363ff405e"
     },
     "dtplyr": {
       "Package": "dtplyr",
@@ -640,14 +629,14 @@
     },
     "evaluate": {
       "Package": "evaluate",
-      "Version": "0.22",
+      "Version": "0.21",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "R",
         "methods"
       ],
-      "Hash": "66f39c7a21e03c4dcb2c2d21d738d603"
+      "Hash": "d59f3b464e8da1aef82dc04b588b8dfb"
     },
     "fansi": {
       "Package": "fansi",
@@ -746,18 +735,6 @@
         "methods"
       ],
       "Hash": "15e9634c0fcd294799e9b2e929ed1b86"
-    },
-    "geosphere": {
-      "Package": "geosphere",
-      "Version": "1.5-18",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "R",
-        "Rcpp",
-        "sp"
-      ],
-      "Hash": "45aa4def70a402e7d20efde490c13ecb"
     },
     "ggplot2": {
       "Package": "ggplot2",
@@ -925,9 +902,9 @@
     },
     "htmltools": {
       "Package": "htmltools",
-      "Version": "0.5.6.1",
+      "Version": "0.5.6",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "R",
         "base64enc",
@@ -938,7 +915,7 @@
         "rlang",
         "utils"
       ],
-      "Hash": "1e12fe667316a76508898839ecfb2d00"
+      "Hash": "a2326a66919a3311f7fbb1e3bf568283"
     },
     "httr": {
       "Package": "httr",
@@ -1031,7 +1008,7 @@
     },
     "knitr": {
       "Package": "knitr",
-      "Version": "1.44",
+      "Version": "1.43",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -1043,7 +1020,7 @@
         "xfun",
         "yaml"
       ],
-      "Hash": "60885b9f746c9dfaef110d070b5f7dc0"
+      "Hash": "9775eb076713f627c07ce41d8199d8f6"
     },
     "labeling": {
       "Package": "labeling",
@@ -1086,28 +1063,16 @@
     },
     "lubridate": {
       "Package": "lubridate",
-      "Version": "1.9.3",
+      "Version": "1.9.2",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "R",
         "generics",
         "methods",
         "timechange"
       ],
-      "Hash": "680ad542fbcf801442c83a6ac5a2126c"
-    },
-    "magick": {
-      "Package": "magick",
-      "Version": "2.8.0",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "Rcpp",
-        "curl",
-        "magrittr"
-      ],
-      "Hash": "88a1be45614781633df69ab666d66143"
+      "Hash": "e25f18436e3efd42c7c590a1c4c15390"
     },
     "magrittr": {
       "Package": "magrittr",
@@ -1174,25 +1139,6 @@
         "vctrs"
       ],
       "Hash": "4f50122dc256b1b6996a4703fecea821"
-    },
-    "move": {
-      "Package": "move",
-      "Version": "4.2.4",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "R",
-        "Rcpp",
-        "geosphere",
-        "httr",
-        "memoise",
-        "methods",
-        "raster",
-        "sp",
-        "terra",
-        "xml2"
-      ],
-      "Hash": "2b9575bf29b9289fe6769823bc9a5842"
     },
     "multidplyr": {
       "Package": "multidplyr",
@@ -1309,13 +1255,10 @@
     },
     "prettyunits": {
       "Package": "prettyunits",
-      "Version": "1.2.0",
+      "Version": "1.1.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Requirements": [
-        "R"
-      ],
-      "Hash": "6b01fc98b1e86c4f705ce9dcfd2f57c7"
+      "Hash": "95ef9167b75dde9d2ccc3c7528393e7e"
     },
     "processx": {
       "Package": "processx",
@@ -1396,14 +1339,14 @@
     },
     "ragg": {
       "Package": "ragg",
-      "Version": "1.2.6",
+      "Version": "1.2.5",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "systemfonts",
         "textshaping"
       ],
-      "Hash": "6ba2fa8740abdc2cc148407836509901"
+      "Hash": "690bc058ea2b1b8a407d3cfe3dce3ef9"
     },
     "rappdirs": {
       "Package": "rappdirs",
@@ -1414,20 +1357,6 @@
         "R"
       ],
       "Hash": "5e3c5dc0b071b21fa128676560dbe94d"
-    },
-    "raster": {
-      "Package": "raster",
-      "Version": "3.6-23",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "R",
-        "Rcpp",
-        "methods",
-        "sp",
-        "terra"
-      ],
-      "Hash": "337d6d70f7d6bf78df236a5a53f09db0"
     },
     "readr": {
       "Package": "readr",
@@ -1516,6 +1445,21 @@
       ],
       "Hash": "d66fe009d4c20b7ab1927eb405db9ee2"
     },
+    "rgeos": {
+      "Package": "rgeos",
+      "Version": "0.6-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "graphics",
+        "methods",
+        "sp",
+        "stats",
+        "utils"
+      ],
+      "Hash": "2eab4e0f0b131f018bfb3e81857f9767"
+    },
     "rlang": {
       "Package": "rlang",
       "Version": "1.1.1",
@@ -1529,7 +1473,7 @@
     },
     "rmarkdown": {
       "Package": "rmarkdown",
-      "Version": "2.25",
+      "Version": "2.24",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -1549,7 +1493,7 @@
         "xfun",
         "yaml"
       ],
-      "Hash": "d65e35823c817f09f4de424fcdfa812a"
+      "Hash": "3854c37590717c08c32ec8542a2e0a35"
     },
     "rstudioapi": {
       "Package": "rstudioapi",
@@ -1690,19 +1634,19 @@
     },
     "spatsoc": {
       "Package": "spatsoc",
-      "Version": "0.2.2",
+      "Version": "0.1.16",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "R",
         "adehabitatHR",
         "data.table",
         "igraph",
-        "sf",
-        "stats",
-        "units"
+        "methods",
+        "rgeos",
+        "sp"
       ],
-      "Hash": "85d774f45e1f14d86767eb0e0a64e26d"
+      "Hash": "822127e647548ea9ce776268c4a4cba6"
     },
     "stringfish": {
       "Package": "stringfish",
@@ -1746,18 +1690,6 @@
       ],
       "Hash": "671a4d384ae9d32fc47a14e98bfa3dc8"
     },
-    "suncalc": {
-      "Package": "suncalc",
-      "Version": "0.5.1",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "data.table",
-        "lubridate",
-        "magrittr"
-      ],
-      "Hash": "d7f6002de83e84715b882458162207b6"
-    },
     "sys": {
       "Package": "sys",
       "Version": "3.4.2",
@@ -1767,38 +1699,26 @@
     },
     "systemfonts": {
       "Package": "systemfonts",
-      "Version": "1.0.5",
+      "Version": "1.0.4",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "R",
         "cpp11"
       ],
-      "Hash": "15b594369e70b975ba9f064295983499"
-    },
-    "terra": {
-      "Package": "terra",
-      "Version": "1.7-46",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Requirements": [
-        "R",
-        "Rcpp",
-        "methods"
-      ],
-      "Hash": "d15182a8a20ffc5880e721bfa1bf4ce9"
+      "Hash": "90b28393209827327de889f49935140a"
     },
     "textshaping": {
       "Package": "textshaping",
-      "Version": "0.3.7",
+      "Version": "0.3.6",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "R",
         "cpp11",
         "systemfonts"
       ],
-      "Hash": "997aac9ad649e0ef3b97f96cddd5622b"
+      "Hash": "1ab6223d3670fac7143202cb6a2d43d5"
     },
     "tibble": {
       "Package": "tibble",
@@ -1934,13 +1854,13 @@
     },
     "tinytex": {
       "Package": "tinytex",
-      "Version": "0.47",
+      "Version": "0.46",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "xfun"
       ],
-      "Hash": "8d4ccb733843e513c1c1cdd66a759f0d"
+      "Hash": "0c41a73214d982f539c56a7773c7afa5"
     },
     "tokenizers": {
       "Package": "tokenizers",
@@ -2036,7 +1956,7 @@
     },
     "vroom": {
       "Package": "vroom",
-      "Version": "1.6.4",
+      "Version": "1.6.3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -2058,41 +1978,7 @@
         "vctrs",
         "withr"
       ],
-      "Hash": "9db52c1656cf19c124f93124ea57f0fd"
-    },
-    "vultureUtils": {
-      "Package": "vultureUtils",
-      "Version": "0.1.0",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "vultureUtils",
-      "RemoteUsername": "kaijagahm",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "6126edd14c5c261d89b93b4fe093eacb50c0cbef",
-      "Requirements": [
-        "R",
-        "animation",
-        "checkmate",
-        "data.table",
-        "dplyr",
-        "geosphere",
-        "igraph",
-        "lubridate",
-        "magrittr",
-        "methods",
-        "move",
-        "purrr",
-        "rlang",
-        "sf",
-        "spatsoc",
-        "stats",
-        "suncalc",
-        "tibble",
-        "tidyr",
-        "utils"
-      ],
-      "Hash": "c25b3eb8c59588827f08259a66e16b01"
+      "Hash": "8318e64ffb3a70e652494017ec455561"
     },
     "withr": {
       "Package": "withr",
