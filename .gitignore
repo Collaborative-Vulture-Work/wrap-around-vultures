@@ -5,3 +5,4 @@
 data/simulations/
 .DS_Store
 data/vulture_permutations/
+data/seasons.Rda
