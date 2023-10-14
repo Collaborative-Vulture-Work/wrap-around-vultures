@@ -38,6 +38,15 @@ sims_xy <- map(sims_xy, ~.x %>% group_by(date) %>% mutate(stepinday = 1:n()))
 sims_xy_25spd <- map(sims_xy, ~.x %>% filter(stepinday %% 2 == 0))
 sims_xy_10spd <- map(sims_xy, ~.x %>% filter(stepinday %% 5 == 0))
 sims_xy_5spd <- map(sims_xy, ~.x %>% filter(stepinday %% 10 == 0))
+save(sims_xy, file = "data/simulations/sims_xy.Rda")
+save(sims_xy_25spd, file = "data/simulations/sims_xy_25spd.Rda")
+save(sims_xy_10spd, file = "data/simulations/sims_xy_10spd.Rda")
+save(sims_xy_5spd, file = "data/simulations/sims_xy_5spd.Rda")
+
+load("data/simulations/sims_xy.Rda")
+load("data/simulations/sims_xy_25spd.Rda")
+load("data/simulations/sims_xy_10spd.Rda")
+load("data/simulations/sims_xy_5spd.Rda")
 
 # PERMUTATIONS ------------------------------------------------------------
 n <- 2 # how many permutations?
