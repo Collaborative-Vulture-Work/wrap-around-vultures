@@ -49,10 +49,10 @@ load("data/simulations/sims_xy_10spd.Rda")
 load("data/simulations/sims_xy_5spd.Rda")
 
 # PERMUTATIONS ------------------------------------------------------------
-n <- 2 # how many permutations?
+n <- 50 # how many permutations?
 
 # Conveyor permutations ---------------------------------------------------
-sms <- c(5, 10)
+sms <- seq(from = 1, to = 25, by = 1)
 
 convey <- function(sims, shifts, n){
   vec <- vector(mode = "list", length = length(shifts))
@@ -166,35 +166,35 @@ names(sms) <- as.character(1:length(sms))
 names(simulations) <- as.character(1:length(simulations))
 names(soc_nonsoc) <- as.character(1:length(soc_nonsoc))
 
-# statsconveyor <- function(conveyorlist){
-#   out <- map(conveyorlist, ~{
-#     simulations <- .x
-#     stats_simulations <- map(simulations, ~{
-#       iterations <- .x
-#       stats_iterations <- map(iterations, ~{
-#         data <- .x
-#         edges <- get_edgelist(data = data, idCol = "indiv", dateCol = "newdatetime")
-#         stats <- get_stats(edgelist = edges, data = data)
-#         return(stats)
-#       }) %>% purrr::list_rbind(names_to = "iteration")
-#     }) %>% purrr::list_rbind(names_to = "simulation")
-#   }) %>% purrr::list_rbind(names_to = "shift") %>%
-#     mutate(shift = sms[as.character(shift)],
-#            sim = simulations[as.character(simulation)],
-#            sns = soc_nonsoc[as.character(simulation)]) %>%
-#     select(-simulation)
-#   return(out) 
-# }
-# 
-# stats_conveyor_50spd <- statsconveyor(conveyor_sms_50spd)
-# stats_conveyor_25spd <- statsconveyor(conveyor_sms_25spd)
-# stats_conveyor_10spd <- statsconveyor(conveyor_sms_10spd)
-# stats_conveyor_5spd <- statsconveyor(conveyor_sms_5spd)
-# 
-# save(stats_conveyor_50spd, file = "data/simulations/stats_conveyor_50spd.Rda")
-# save(stats_conveyor_25spd, file = "data/simulations/stats_conveyor_25spd.Rda")
-# save(stats_conveyor_10spd, file = "data/simulations/stats_conveyor_10spd.Rda")
-# save(stats_conveyor_5spd, file = "data/simulations/stats_conveyor_5spd.Rda")
+statsconveyor <- function(conveyorlist){
+  out <- map(conveyorlist, ~{
+    simulations <- .x
+    stats_simulations <- map(simulations, ~{
+      iterations <- .x
+      stats_iterations <- map(iterations, ~{
+        data <- .x
+        edges <- get_edgelist(data = data, idCol = "indiv", dateCol = "newdatetime")
+        stats <- get_stats(edgelist = edges, data = data)
+        return(stats)
+      }) %>% purrr::list_rbind(names_to = "iteration")
+    }) %>% purrr::list_rbind(names_to = "simulation")
+  }) %>% purrr::list_rbind(names_to = "shift") %>%
+    mutate(shift = sms[as.character(shift)],
+           sim = simulations[as.character(simulation)],
+           sns = soc_nonsoc[as.character(simulation)]) %>%
+    select(-simulation)
+  return(out)
+}
+
+stats_conveyor_50spd <- statsconveyor(conveyor_sms_50spd)
+stats_conveyor_25spd <- statsconveyor(conveyor_sms_25spd)
+stats_conveyor_10spd <- statsconveyor(conveyor_sms_10spd)
+stats_conveyor_5spd <- statsconveyor(conveyor_sms_5spd)
+
+save(stats_conveyor_50spd, file = "data/simulations/stats_conveyor_50spd.Rda")
+save(stats_conveyor_25spd, file = "data/simulations/stats_conveyor_25spd.Rda")
+save(stats_conveyor_10spd, file = "data/simulations/stats_conveyor_10spd.Rda")
+save(stats_conveyor_5spd, file = "data/simulations/stats_conveyor_5spd.Rda")
 
 load("data/simulations/stats_conveyor_50spd.Rda")
 load("data/simulations/stats_conveyor_25spd.Rda")
@@ -212,20 +212,20 @@ statsrandom <- function(randomlist){
   return(out)
 }
 
-# stats_random_50spd <- statsrandom(random_50spd)
-# stats_random_25spd <- statsrandom(random_25spd)
-# stats_random_10spd <- statsrandom(random_10spd)
-# stats_random_5spd <- statsrandom(random_5spd)
-# 
-# stats_random_50spd <- label(stats_random_50spd)
-# stats_random_25spd <- label(stats_random_25spd)
-# stats_random_10spd <- label(stats_random_10spd)
-# stats_random_5spd <- label(stats_random_5spd)
-# 
-# save(stats_random_50spd, file = "data/simulations/stats_random_50spd.Rda")
-# save(stats_random_25spd, file = "data/simulations/stats_random_25spd.Rda")
-# save(stats_random_10spd, file = "data/simulations/stats_random_10spd.Rda")
-# save(stats_random_5spd, file = "data/simulations/stats_random_5spd.Rda")
+stats_random_50spd <- statsrandom(random_50spd)
+stats_random_25spd <- statsrandom(random_25spd)
+stats_random_10spd <- statsrandom(random_10spd)
+stats_random_5spd <- statsrandom(random_5spd)
+
+stats_random_50spd <- label(stats_random_50spd)
+stats_random_25spd <- label(stats_random_25spd)
+stats_random_10spd <- label(stats_random_10spd)
+stats_random_5spd <- label(stats_random_5spd)
+
+save(stats_random_50spd, file = "data/simulations/stats_random_50spd.Rda")
+save(stats_random_25spd, file = "data/simulations/stats_random_25spd.Rda")
+save(stats_random_10spd, file = "data/simulations/stats_random_10spd.Rda")
+save(stats_random_5spd, file = "data/simulations/stats_random_5spd.Rda")
 
 load("data/simulations/stats_random_50spd.Rda")
 load("data/simulations/stats_random_25spd.Rda")
