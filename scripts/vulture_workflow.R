@@ -128,7 +128,7 @@ obs <- vulture_stats_obs %>%
 perm <- vulture_stats_perms %>%
   mutate(ID1 = factor(ID1, levels = ord_deg, ordered = T))
 
-perm %>%
+deg_box_vultures <- perm %>%
   left_join(obs %>% select(ID1, deg), by = "ID1") %>%
   group_by(ID1) %>%
   mutate(deg.y = ifelse(row_number() == 1, deg.y, NA)) %>%
@@ -139,8 +139,9 @@ perm %>%
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())+
   ylab("Degree") + xlab("Ranked agents")
+ggsave(deg_box_vultures, filename = "fig/vulture_permutations_plots/deg_box_vultures.png")
 
-perm %>%
+str_box_vultures <- perm %>%
   left_join(obs %>% select(ID1, str), by = "ID1") %>%
   group_by(ID1) %>%
   mutate(deg.y = ifelse(row_number() == 1, str.y, NA)) %>%
@@ -151,5 +152,6 @@ perm %>%
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())+
   ylab("Strength") + xlab("Ranked agents")
+ggsave(str_box_vultures, filename = "fig/vulture_permutations_plots/str_box_vultures.png")
 
 
