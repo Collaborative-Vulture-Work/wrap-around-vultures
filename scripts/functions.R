@@ -41,7 +41,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            HRStpSize = 100,
                            HRStpStd = 50,
                            socialWeight = 0.5, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
-                           sameStartingAngle = 0
+                           sameStartingAngle = 0,
+                           asocial = F
 ){
   
   # 1. Set the seed, if one is provided ----------------------------------------
@@ -183,11 +184,22 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       # If another individual is within social perception range...
       if(min(Dist, na.rm = T) < Soc_Percep_Rng){
         if(socialWeight < 0 | socialWeight >1){stop("socialWeight must be a number between 0 and 1.")}
-        # Take the mean between the home range center and the closest other individual's location, and bias towards that mean
-        otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
-        ownHRCent <- HRCentPerDay[[dayCount]][Curr_indv, 1:2]
-        meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)
-        BiasPoint <- meanpoint
+          otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
+          ownHRCent <- HRCentPerDay[[dayCount]][Curr_indv, 1:2]
+        if(!asocial){
+          # Take the mean between the home range center and the closest other individual's location, and bias towards that mean
+          meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)
+          BiasPoint <- meanpoint
+        }
+        else
+        {
+          toOther <- otherIndivLoc - XYind[[Curr_indv]][Curr_timestep, ]
+          awayOther <- -1 * toOther
+          awayPoint <- XYind[[Curr_indv]][Curr_timestep, ] + awayOther
+          
+          meanpoint <- (socialWeight*awayPoint + (1-socialWeight) * ownHRCent)
+          BiasPoint <- meanpoint
+        }
       }
       
       # Set direction to the chosen bias point
@@ -198,6 +210,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       if(mu < 0){
         mu <- mu + 2 * pi  
       } 
+      
       # Bias to initial location + CRW to find the von mises center for the next step
       mu.av <- Arg(EtaCRW * exp(Phi_ind[Curr_indv] * (0+1i)) + (1 - EtaCRW) * exp(mu * (0+1i)))
       # Choose current step direction from von Mises centered around the direction selected above 
