@@ -119,6 +119,49 @@ shifthistrs_deg <- summ %>%
   ylab("")+xlab("Mean degree")
 ggsave(shifthistrs_deg, filename = "fig/sims_plots/shifhistrs_deg.png", width = 9, height = 8)
 
+# Make this into a single graph: shiftprop vs. mean mean deg/mean mean str
+summsumm <- summ %>%
+  group_by(type, uniquesim, shiftprop) %>%
+  summarize(mnmndeg = mean(mndeg, na.rm = T),
+            mnmnstr = mean(mnstr, na.rm = T)) %>%
+  mutate(scenario = substr(uniquesim, 1, 1),
+         sns = factor(stringr::str_extract(uniquesim, "[a-z]+")))
+obs_summsumm <- obs_summ %>%
+  mutate(scenario = substr(uniquesim, 1, 1),
+         sns = factor(stringr::str_extract(uniquesim, "[a-z]+")))
+rand_forplot <- summsumm %>% filter(type == "random") %>% rename("mndeg" = mnmndeg, 
+                                                                 "mnstr" = mnmnstr)
+horizlines <- bind_rows(obs_summsumm %>% mutate(type = "observed"), rand_forplot)
+
+shiftprop_mnmndeg <- summsumm %>%
+  filter(type == "conveyor") %>%
+  ggplot(aes(x = shiftprop, y = mnmndeg, col = sns))+
+  geom_point()+
+  geom_path()+
+  facet_wrap(~scenario)+
+  theme_minimal()+
+  geom_hline(data = horizlines, aes(yintercept = mndeg, col = sns, lty = type), linewidth = 1)+
+  ylab("Mean population mean degree")+xlab("Shiftmax (prop. of total dur)")+
+  scale_color_manual(name = "Sociality", values = c("firebrick3", "blue"))+
+  scale_linetype_manual(name = "Reference \nlines", values = 1:2)
+# This graph is really not readable at all. What should be done?
+ggsave(shiftprop_mnmndeg, file = "fig/sims_plots/shiftprop_mnmnmdeg.png", width = 9, height = 8)
+
+
+shiftprop_mnmnstr <- summsumm %>%
+  filter(type == "conveyor") %>%
+  ggplot(aes(x = shiftprop, y = mnmnstr, col = sns))+
+  geom_point()+
+  geom_path()+
+  facet_wrap(~scenario)+
+  theme_minimal()+
+  geom_hline(data = horizlines, aes(yintercept = mnstr, col = sns, lty = type), linewidth = 1)+
+  ylab("Mean population mean strength")+xlab("Shiftmax (prop. of total dur)")+
+  scale_color_manual(name = "Sociality", values = c("firebrick3", "blue"))+
+  scale_linetype_manual(name = "Reference \nlines", values = 1:2)
+# This graph is really not readable at all. What should be done?
+ggsave(shiftprop_mnmnstr, file = "fig/sims_plots/shiftprop_mnmnstr.png", width = 9, height = 8)
+
 # Deltas
 # Referring back to the histograms: let's look at the difference between each individual's real value and the mean of its values in the permutations. 
 glimpse(stats_perm)
