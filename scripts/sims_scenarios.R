@@ -412,3 +412,8 @@ trajectories_patchwork <- ((a+b)/(c+d)/(e+f))+
   theme(text = element_text('mono', size = 15))
 trajectories_patchwork
 ggsave(trajectories_patchwork, filename = "fig/trajectories_patchwork.png", width = 11, height = 16)
+
+trajectories_patchwork_horizontal <- ((a+c+e)/(b+d+f))+
+  theme(text = element_text('mono', size = 15))
+trajectories_patchwork_horizontal
+ggsave(trajectories_patchwork_horizontal, filename = "fig/trajectories_patchwork_horizontal.png", width = 11, height = 16)
