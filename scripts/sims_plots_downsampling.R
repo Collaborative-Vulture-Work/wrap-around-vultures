@@ -31,17 +31,17 @@ load("data/simulations/sims_xy_5spd.Rda")
 # save(conveyor_sms_5spd_reduced, file = "data/simulations/conveyor_sms_5spd_reduced.Rda")
 
 sms_reduced <- c(10)
-# load("data/simulations/conveyor_sms_50spd_reduced.Rda")
-# load("data/simulations/conveyor_sms_25spd_reduced.Rda")
-# load("data/simulations/conveyor_sms_10spd_reduced.Rda")
-# load("data/simulations/conveyor_sms_5spd_reduced.Rda")
-# conveyors <- list(conveyor_sms_50spd_reduced, conveyor_sms_25spd_reduced, conveyor_sms_10spd_reduced, conveyor_sms_5spd_reduced)
+load("data/simulations/conveyor_sms_50spd_reduced.Rda")
+load("data/simulations/conveyor_sms_25spd_reduced.Rda")
+load("data/simulations/conveyor_sms_10spd_reduced.Rda")
+load("data/simulations/conveyor_sms_5spd_reduced.Rda")
+conveyors <- list(conveyor_sms_50spd_reduced, conveyor_sms_25spd_reduced, conveyor_sms_10spd_reduced, conveyor_sms_5spd_reduced)
 # 
-# load("data/simulations/random_50spd.Rda")
-# load("data/simulations/random_25spd.Rda")
-# load("data/simulations/random_10spd.Rda")
-# load("data/simulations/random_5spd.Rda")
-# randoms <- list(random_50spd, random_25spd, random_10spd, random_5spd)
+load("data/simulations/random_50spd.Rda")
+load("data/simulations/random_25spd.Rda")
+load("data/simulations/random_10spd.Rda")
+load("data/simulations/random_5spd.Rda")
+randoms <- list(random_50spd, random_25spd, random_10spd, random_5spd)
 
 # Calculate distances for the random data
 randomsdistdf <- map(randoms, ~{
@@ -200,11 +200,6 @@ testconveyor %>% filter(iteration ==1, indiv =="1") %>% ggplot(aes(x = step, y =
   theme_minimal()+
   geom_path()
 
-simsdf %>%
-  filter(indiv == "1") %>%
-  mutate(step = 1:n())
-ggplot(aes(x = step, y = ))
-
 # This is confusing. Let's just take one single individual and get observed, conveyor (10shiftmax) and random data for it. Choosing individual 1. Just one iteration for random and conveyor.
 ## get the data
 id1_obs <- simsdf %>% filter(indiv == 1)
@@ -301,4 +296,4 @@ fp_strength_ns <- fp %>%
   theme_minimal()+
   xlab("Proportion of jumps")+
   ylab("False positive rate (strength)")
-ggsave(fp_degree_ns, file = "fig/sims_plots/fp_strength_ns.png", width = 7, height = 6)
+ggsave(fp_strength_ns, file = "fig/sims_plots/fp_strength_ns.png", width = 7, height = 6)
