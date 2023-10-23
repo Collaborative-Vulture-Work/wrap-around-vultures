@@ -5,6 +5,7 @@ library(lubridate)
 library(data.table)
 library(spatsoc)
 library(proxy)
+library(Polychrome) # for color palettes
 #devtools::install_github("kaijagahm/vultureUtils")
 # library(vultureUtils)
 
@@ -548,3 +549,8 @@ theme_vulturePerm <- function(){
     )
 }
 
+permutationColors <- c("darkviolet", "orange") # Colors to distinguish random vs. conveyor permutations
+snsColors <- c("darkolivegreen", "yellowgreen") # Colors to distinguish between non-social and social
+# shiftColors # A continuous scale to illustrate the amount of shift. For now using the default ggplot2 scale
+tencolors <- Polychrome::kelly.colors(13)[-1][-1][-7] # remove white and black and gray. Discrete colors for ten individuals
+Polychrome::swatch(tencolors) # view the colors

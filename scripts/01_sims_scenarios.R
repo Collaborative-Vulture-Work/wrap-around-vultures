@@ -2,14 +2,10 @@
 # Scenario 1: fixed home ranges
 # Scenario 2: randomly-moving home ranges
 # Scenario 3: directionally-moving home ranges
-source("scripts/functions.R")
+source("scripts/00.1_functions.R")
 library(tidyverse)
 library(viridis)
 socLevels <- seq(from = 0, to = 1, by = 0.1)
-library(Polychrome)
-tencolors <- kelly.colors(13)[-1][-1][-7] # remove white and black and gray
-swatch(tencolors)
-
 
 # SIM 1 -------------------------------------------------------------------
 r <- 0.01 # home range centers effectively not moving
