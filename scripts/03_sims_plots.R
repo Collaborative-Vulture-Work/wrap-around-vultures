@@ -1,5 +1,10 @@
 library(tidyverse)
 library(viridis)
+library(grid)
+library(cowplot)
+library(patchwork)
+library(gridExtra)
+source("scripts/00.1_functions.R")
 load("data/simulations/stats_perm.Rda")
 load("data/simulations/obs_stats_df.Rda")
 days <- 50
@@ -9,6 +14,7 @@ uniquesims <- unique(obs_stats_df$uniquesim)
 whichshift <- 5
 # 6-panel boxplot: strength
 plots <- vector(mode = "list", length = length(uniquesims))
+insets <- vector(mode = "list", length = length(uniquesims))
 for(i in 1:length(uniquesims)){
   usim <- unique(obs_stats_df$uniquesim)[i]
   letter <- letters[i]
@@ -35,22 +41,56 @@ for(i in 1:length(uniquesims)){
     theme(axis.ticks.x = element_blank(),
           axis.text.x = element_blank(),
           axis.title = element_blank(),
-          #legend.position = "none"
+          legend.position = "bottom",
+          panel.background = element_rect(fill = "transparent"),
+          plot.background = element_rect(fill = "transparent", color = NA)
           )+
     scale_fill_manual(name = "Permutation type", values = permutationColors)+
     scale_color_manual(name = "Permutation type", values = permutationColors)+
     labs(title = letter)+
     NULL
   plots[[i]] <- p
+  
+  # Now make the inset
+  summ <- datperm %>%
+    filter(shift %in% c(whichshift, NA)) %>%
+    group_by(iteration, type) %>%
+    summarize(mnstr = mean(strength)) %>%
+    ungroup()
+  obsval <- datobs %>%
+    pull(strength) %>%
+    mean()
+  
+  miniplot <- summ %>%
+    ggplot(aes(x = mnstr))+
+    geom_density(aes(col = type), linewidth = 1)+
+    geom_vline(xintercept = obsval, lty = 2, linewidth = 0.5)+
+    theme_classic()+
+    coord_flip()+
+    theme(axis.text.y = element_text(size = 6),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          legend.position = "none")+
+    scale_color_manual(name = "Permutation type", values = permutationColors)
+  insets[[i]] <- miniplot
 }
 
-test <- ggpubr::ggarrange(plotlist = plots, ncol = 2, nrow = 3, common.legend = TRUE, legend = "bottom") # I want to use ggarrange instead of patchwork because patchwork doesn't seem to allow for a common legend.
-test
+fulls <- map2(plots, insets, ~.x + theme(legend.position = "none") + patchwork::inset_element(.y, 0.5, 0.5, 1, 1, clip = FALSE, on_top = FALSE))
+
+test <- ggpubr::ggarrange(plotlist = fulls, ncol = 2, nrow = 3#, 
+                          #common.legend = TRUE, legend = "bottom"
+                          ) # Common legend doesn't work if we do it like this. Let's just paste on another one.
+legend <- ggpubr::get_legend(plots[[1]])
+purpleOrangeLegend <- legend
+ggsave(purpleOrangeLegend, filename = "fig/sims_plots_purpleOrangeLegend.png", width = 7, height = 6)
 str_6panel <- test
-ggsave(str_6panel, filename = "fig/sims_plots/str_6panel.png", width = 7, height = 6)
+ggsave(str_6panel, filename = "fig/sims_plots/str_6panel.png", width = 7, height = 7)
 
 # 6-panel boxplot: degree
 plots <- vector(mode = "list", length = length(uniquesims))
+insets <- vector(mode = "list", length = length(uniquesims))
 for(i in 1:length(uniquesims)){
   usim <- unique(obs_stats_df$uniquesim)[i]
   letter <- letters[i]
@@ -64,7 +104,7 @@ for(i in 1:length(uniquesims)){
     mutate(ID1 = factor(ID1, levels = ord))
   datperm <- stats_perm %>%
     filter(uniquesim == usim,
-           shift %in% c(whichshift, NA)) %>%
+           shift %in% c(whichshift, NA)) %>% 
     mutate(ID1 = factor(ID1, levels = ord))
   
   # Make the plot
@@ -76,172 +116,261 @@ for(i in 1:length(uniquesims)){
     geom_point(data = datobs, aes(x = ID1, y = degree), col = "black", size = 2)+
     theme(axis.ticks.x = element_blank(),
           axis.text.x = element_blank(),
-          #legend.position = "none",
-          axis.title = element_blank())+
+          axis.title = element_blank(),
+          legend.position = "bottom",
+          panel.background = element_rect(fill = "transparent"),
+          plot.background = element_rect(fill = "transparent", color = NA)
+    )+
     scale_fill_manual(name = "Permutation type", values = permutationColors)+
     scale_color_manual(name = "Permutation type", values = permutationColors)+
-    labs(title = letter)
+    labs(title = letter)+
+    NULL
   plots[[i]] <- p
+  
+  # Now make the inset
+  summ <- datperm %>%
+    filter(shift %in% c(whichshift, NA)) %>%
+    group_by(iteration, type) %>%
+    summarize(mndeg = mean(degree)) %>%
+    ungroup()
+  obsval <- datobs %>%
+    pull(degree) %>%
+    mean()
+  
+  miniplot <- summ %>%
+    ggplot(aes(x = mndeg))+
+    geom_density(aes(col = type), linewidth = 1)+
+    geom_vline(xintercept = obsval, lty = 2, linewidth = 0.5)+
+    theme_classic()+
+    coord_flip()+
+    theme(axis.text.y = element_text(size = 6),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          legend.position = "none")+
+    scale_color_manual(name = "Permutation type", values = permutationColors)
+  insets[[i]] <- miniplot
 }
 
-test <- ggpubr::ggarrange(plotlist = plots, ncol = 2, nrow = 3, common.legend = TRUE, legend = "bottom") # I want to use ggarrange instead of patchwork because patchwork doesn't seem to allow for a common legend.
-test
+fulls <- map2(plots, insets, ~.x + theme(legend.position = "none") + patchwork::inset_element(.y, 0.63, 0.7, 1, 1.2, clip = FALSE, on_top = FALSE))
+
+test <- ggpubr::ggarrange(plotlist = fulls, ncol = 2, nrow = 3#, 
+                          #common.legend = TRUE, legend = "bottom"
+) # Common legend doesn't work if we do it like this. Let's just paste on another one.
+# legend <- ggpubr::get_legend(plots[[1]])
+# purpleOrangeLegend <- legend
+# ggsave(purpleOrangeLegend, filename = "fig/sims_plots_purpleOrangeLegend.png", width = 7, height = 6)
 deg_6panel <- test
-ggsave(deg_6panel, filename = "fig/sims_plots/deg_6panel.png", width = 7, height = 6)
+ggsave(deg_6panel, filename = "fig/sims_plots/deg_6panel.png", width = 7, height = 7)
 
 # Histograms: mean value vs. black
 summ <- stats_perm %>%
   group_by(uniquesim, type, iteration, shift) %>%
   summarize(mndeg = mean(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T)) %>%
-  mutate(shiftprop = (2*shift)/days)
+  mutate(shiftprop = (2*shift)/days) %>%
+  mutate(letters = case_when(uniquesim == "1_ns" ~ "a",
+                             uniquesim == "1_s" ~ "b",
+                             uniquesim == "2_ns" ~ "c",
+                             uniquesim == "2_s" ~ "d",
+                             uniquesim == "3_ns" ~ "e",
+                             uniquesim == "3_s" ~ "f",
+                             TRUE ~ NA))
 obs_summ <- obs_stats_df %>%
   group_by(uniquesim) %>%
   summarize(mndeg = mean(degree, na.rm = T),
-            mnstr = mean(strength, na.rm = T))
+            mnstr = mean(strength, na.rm = T)) %>%
+  mutate(letters = case_when(uniquesim == "1_ns" ~ "a",
+                             uniquesim == "1_s" ~ "b",
+                             uniquesim == "2_ns" ~ "c",
+                             uniquesim == "2_s" ~ "d",
+                             uniquesim == "3_ns" ~ "e",
+                             uniquesim == "3_s" ~ "f",
+                             TRUE ~ NA))
 
 # Shift histograms
 shifthistrs_str <- summ %>%
   filter(type == "conveyor") %>%
   ggplot(aes(x = mnstr, group = factor(shiftprop)))+
-  geom_density(aes(col = shiftprop))+
-  facet_wrap(~uniquesim, ncol = 2, nrow = 3, scales = "free")+
+  geom_density(aes(col = shiftprop), linewidth = 1.2)+
+  scale_colour_gradientn(colors = continuousColors)+
+  facet_wrap(~letters, ncol = 2, nrow = 3, scales = "free")+
   theme_classic()+
   theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
-  geom_density(data = summ %>% filter(type == "random"), col = "red")+
-  #theme(legend.position = "none")+
+  geom_density(data = summ %>% filter(type == "random"), col = permutationColors[2], linewidth = 1.2)+
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text.x = element_text(hjust = 0, size = 12, face = "bold"),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 14))+
   geom_vline(data = obs_summ, aes(xintercept = mnstr), linetype = 2)+
-  ylab("")+xlab("Mean strength")
+  ylab("Frequency")+xlab("Mean strength")+
+  labs(color = "Shift proportion")
+shifthistrs_str
 ggsave(shifthistrs_str, filename = "fig/sims_plots/shifhistrs_str.png", width = 9, height = 8)
 
 shifthistrs_deg <- summ %>%
   filter(type == "conveyor") %>%
   ggplot(aes(x = mndeg, group = factor(shiftprop)))+
-  geom_density(aes(col = shiftprop))+
-  facet_wrap(~uniquesim, ncol = 2, nrow = 3, scales = "free")+
+  geom_density(aes(col = shiftprop), linewidth = 1.2)+
+  scale_colour_gradientn(colors = continuousColors)+
+  facet_wrap(~letters, ncol = 2, nrow = 3, scales = "free")+
   theme_classic()+
   theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
-  geom_density(data = summ %>% filter(type == "random"), col = "red")+
-  #theme(legend.position = "none")+
+  geom_density(data = summ %>% filter(type == "random"), col = permutationColors[2], linewidth = 1.2)+
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text.x = element_text(hjust = 0, size = 12, face = "bold"),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 14)
+  )+
   geom_vline(data = obs_summ, aes(xintercept = mndeg), linetype = 2)+
-  ylab("")+xlab("Mean degree")
+  ylab("Frequency")+xlab("Mean degree")+
+  labs(color = "Shift proportion")
+shifthistrs_deg
 ggsave(shifthistrs_deg, filename = "fig/sims_plots/shifhistrs_deg.png", width = 9, height = 8)
 
-# Make this into a single graph: shiftprop vs. mean mean deg/mean mean str
+# Make these into a single graph: shiftprop vs. mean mean deg/mean mean str
 summsumm <- summ %>%
   group_by(type, uniquesim, shiftprop) %>%
   summarize(mnmndeg = mean(mndeg, na.rm = T),
             mnmnstr = mean(mnstr, na.rm = T)) %>%
   mutate(scenario = substr(uniquesim, 1, 1),
-         sns = factor(stringr::str_extract(uniquesim, "[a-z]+")))
+         sns = factor(stringr::str_extract(uniquesim, "[a-z]+")),
+         sociable = case_when(sns == "s" ~ "Sociable",
+                              sns == "ns" ~ "Non-sociable"))
 obs_summsumm <- obs_summ %>%
   mutate(scenario = substr(uniquesim, 1, 1),
-         sns = factor(stringr::str_extract(uniquesim, "[a-z]+")))
+         sns = factor(stringr::str_extract(uniquesim, "[a-z]+")),
+         sociable = case_when(sns == "s" ~ "Sociable",
+                              sns == "ns" ~ "Non-sociable"))
 rand_forplot <- summsumm %>% filter(type == "random") %>% rename("mndeg" = mnmndeg, 
-                                                                 "mnstr" = mnmnstr)
+                                                                 "mnstr" = mnmnstr) %>%
+  mutate(sociable = case_when(sns == "s" ~ "Sociable",
+                              sns == "ns" ~ "Non-sociable"))
 horizlines <- bind_rows(obs_summsumm %>% mutate(type = "observed"), rand_forplot)
 
 shiftprop_mnmndeg <- summsumm %>%
   filter(type == "conveyor") %>%
-  ggplot(aes(x = shiftprop, y = mnmndeg, col = sns))+
-  geom_point()+
-  geom_path()+
-  facet_wrap(~scenario)+
-  theme_minimal()+
-  geom_hline(data = horizlines, aes(yintercept = mndeg, col = sns, lty = type), linewidth = 1)+
-  ylab("Mean population mean degree")+xlab("Shiftmax (prop. of total dur)")+
-  scale_color_manual(name = "Sociality", values = c("firebrick3", "blue"))+
-  scale_linetype_manual(name = "Reference \nlines", values = 1:2)
-# This graph is really not readable at all. What should be done?
-ggsave(shiftprop_mnmndeg, file = "fig/sims_plots/shiftprop_mnmnmdeg.png", width = 9, height = 8)
-
+  ggplot(aes(x = shiftprop, y = mnmndeg, col = sociable))+
+  geom_point(size = 3)+
+  geom_path(linewidth = 1.5)+
+  facet_wrap(~scenario, scales = "free", ncol = 1)+
+  theme_classic()+
+  geom_hline(data = horizlines, aes(yintercept = mndeg, col = sociable, lty = type), linewidth = 1)+
+  ylab("Mean mean degree (population)")+xlab("Shift proportion")+
+  scale_color_manual(values = snsColors)+
+  scale_linetype_manual(name = "Reference \nlines", values = c(2, 1))+
+  guides(linetype = "none")+
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        axis.text = element_text(size = 12))
+shiftprop_mnmndeg
+ggsave(shiftprop_mnmndeg, file = "fig/sims_plots/shiftprop_mnmndeg.png", width = 4, height = 10)
 
 shiftprop_mnmnstr <- summsumm %>%
   filter(type == "conveyor") %>%
-  ggplot(aes(x = shiftprop, y = mnmnstr, col = sns))+
-  geom_point()+
-  geom_path()+
-  facet_wrap(~scenario)+
-  theme_minimal()+
-  geom_hline(data = horizlines, aes(yintercept = mnstr, col = sns, lty = type), linewidth = 1)+
-  ylab("Mean population mean strength")+xlab("Shiftmax (prop. of total dur)")+
-  scale_color_manual(name = "Sociality", values = c("firebrick3", "blue"))+
-  scale_linetype_manual(name = "Reference \nlines", values = 1:2)
-# This graph is really not readable at all. What should be done?
-ggsave(shiftprop_mnmnstr, file = "fig/sims_plots/shiftprop_mnmnstr.png", width = 9, height = 8)
+  ggplot(aes(x = shiftprop, y = mnmnstr, col = sociable))+
+  geom_point(size = 3)+
+  geom_path(linewidth = 1.5)+
+  facet_wrap(~scenario, scales = "free", ncol = 1)+
+  theme_classic()+
+  geom_hline(data = horizlines, aes(yintercept = mnstr, col = sociable, lty = type), linewidth = 1)+
+  ylab("Mean mean strength (population)")+xlab("Shift proportion")+
+  scale_color_manual(values = snsColors)+
+  scale_linetype_manual(name = "Reference \nlines", values = c(2, 1))+
+  guides(linetype = "none")+
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        axis.text = element_text(size = 12))
+shiftprop_mnmnstr
+ggsave(shiftprop_mnmnstr, file = "fig/sims_plots/shiftprop_mnmnstr.png", width = 4, height = 10)
 
 # Deltas
 # Referring back to the histograms: let's look at the difference between each individual's real value and the mean of its values in the permutations. 
-glimpse(stats_perm)
-deltas_summ <- stats_perm %>%
-  group_by(uniquesim, type, shift, ID1) %>%
-  summarize(mndeg = mean(degree, na.rm = T),
-            sddeg = sd(degree, na.rm = T),
-            mnstr = mean(strength, na.rm = T),
-            sdstr = sd(strength, na.rm = T)) %>%
-  mutate(shiftprop = (shift*2)/days)
-
-deltas <- deltas_summ %>%
-  left_join(obs_stats_df %>% select(ID1, degree, strength, uniquesim), by = c("ID1", "uniquesim")) %>%
-  mutate(delta_deg_zscore = (degree-mndeg)/sddeg,
-         delta_str_zscore = (strength-mnstr)/sdstr)
-
-deltahists_deg <- deltas %>%
-  filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
-  ggplot(aes(x = delta_deg_zscore, group = factor(shiftprop)))+
-  geom_density(aes(col = shiftprop))+
-  #scale_color_viridis()+
-  facet_wrap(~uniquesim, nrow = 3)+
-  theme_classic()+
-  geom_vline(aes(xintercept = 0))+
-  # add back random-shuffled data
-  geom_density(data = deltas %>% filter(is.na(shiftprop)), 
-               aes(x = delta_deg_zscore), col = "red")+
-  ylab("")+xlab("Observed degree z-score")
-ggsave(deltahists_deg, filename = "fig/sims_plots/deltahists_deg.png", width = 6, height = 7)
-
-deltahists_str <- deltas %>%
-  filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
-  ggplot(aes(x = delta_str_zscore, group = factor(shiftprop)))+
-  geom_density(aes(col = shiftprop))+
-  #scale_color_viridis()+
-  facet_wrap(~uniquesim, nrow = 3, scales = "free")+
-  theme_classic()+
-  geom_vline(aes(xintercept = 0))+
-  # add back random-shuffled data
-  geom_density(data = deltas %>% filter(is.na(shiftprop)), aes(x = delta_str_zscore), col = "red")+
-  ylab("")+xlab("Obs - mean permuted, Strength")
-ggsave(deltahists_str, filename = "fig/sims_plots/deltahists_str.png", width = 6, height = 7)
+# glimpse(stats_perm)
+# deltas_summ <- stats_perm %>%
+#   group_by(uniquesim, type, shift, ID1) %>%
+#   summarize(mndeg = mean(degree, na.rm = T),
+#             sddeg = sd(degree, na.rm = T),
+#             mnstr = mean(strength, na.rm = T),
+#             sdstr = sd(strength, na.rm = T)) %>%
+#   mutate(shiftprop = (shift*2)/days)
+# 
+# deltas <- deltas_summ %>%
+#   left_join(obs_stats_df %>% select(ID1, degree, strength, uniquesim), by = c("ID1", "uniquesim")) %>%
+#   mutate(delta_deg_zscore = (degree-mndeg)/sddeg,
+#          delta_str_zscore = (strength-mnstr)/sdstr)
+# 
+# deltahists_deg <- deltas %>%
+#   filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
+#   ggplot(aes(x = delta_deg_zscore, group = factor(shiftprop)))+
+#   geom_density(aes(col = shiftprop))+
+#   #scale_color_viridis()+
+#   facet_wrap(~uniquesim, nrow = 3)+
+#   theme_classic()+
+#   geom_vline(aes(xintercept = 0))+
+#   # add back random-shuffled data
+#   geom_density(data = deltas %>% filter(is.na(shiftprop)), 
+#                aes(x = delta_deg_zscore), col = "red")+
+#   ylab("")+xlab("Observed degree z-score")
+# ggsave(deltahists_deg, filename = "fig/sims_plots/deltahists_deg.png", width = 6, height = 7)
+# 
+# deltahists_str <- deltas %>%
+#   filter(!is.na(shiftprop)) %>% # remove the random-shuffled data
+#   ggplot(aes(x = delta_str_zscore, group = factor(shiftprop)))+
+#   geom_density(aes(col = shiftprop))+
+#   #scale_color_viridis()+
+#   facet_wrap(~uniquesim, nrow = 3, scales = "free")+
+#   theme_classic()+
+#   geom_vline(aes(xintercept = 0))+
+#   # add back random-shuffled data
+#   geom_density(data = deltas %>% filter(is.na(shiftprop)), aes(x = delta_str_zscore), col = "red")+
+#   ylab("")+xlab("Obs - mean permuted, Strength")
+# ggsave(deltahists_str, filename = "fig/sims_plots/deltahists_str.png", width = 6, height = 7)
 
 # Do more emergently-social agents deviate more/less from the permutation means than less emergently-social agents?
 # First, let's calculate the rank for the emergent sociality of each individual
-ranked <- deltas %>%
-  group_by(uniquesim, type, shift) %>%
-  arrange(desc(degree), .by_group = T) %>%
-  mutate(rank_deg = 1:n()) %>%
-  arrange(desc(strength), .by_group = T) %>%
-  mutate(rank_str = 1:n())
-
-deg_soc_z <- ranked %>%
-  filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
-  ggplot(aes(x = rank_deg, y = delta_deg_zscore, group = factor(shiftprop)))+
-  geom_smooth(method = "lm", se = F, aes(col = shiftprop))+
-  geom_point(aes(col = shiftprop), size = 0.5)+
-  theme_classic()+
-  geom_point(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", size = 0.5, pch = 4)+
-  geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", method = "lm", se = F)+
-  facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
-  ylab("Observed degree z-score") + xlab("Agent rank (degree)")
-ggsave(deg_soc_z, filename = "fig/sims_plots/deg_soc_z.png", height = 7, width = 6)
-
-str_soc_z <- ranked %>%
-  filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
-  ggplot(aes(x = rank_str, y = delta_str_zscore, group = factor(shiftprop)))+
-  geom_smooth(method = "lm", se = F, aes(col = shiftprop))+
-  geom_point(aes(col = shiftprop), size = 0.5)+
-  theme_classic()+
-  geom_point(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", size = 0.5, pch = 4)+
-  geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", method = "lm", se = F)+
-  facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
-  ylab("Observed strength z-score") + xlab("Agent rank (strength)")
-ggsave(str_soc_z, filename = "fig/sims_plots/str_soc_z.png", height = 7, width = 6)
+# ranked <- deltas %>%
+#   group_by(uniquesim, type, shift) %>%
+#   arrange(desc(degree), .by_group = T) %>%
+#   mutate(rank_deg = 1:n()) %>%
+#   arrange(desc(strength), .by_group = T) %>%
+#   mutate(rank_str = 1:n())
+# 
+# deg_soc_z <- ranked %>%
+#   filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
+#   ggplot(aes(x = rank_deg, y = delta_deg_zscore, group = factor(shiftprop)))+
+#   geom_smooth(method = "lm", se = F, aes(col = shiftprop))+
+#   geom_point(aes(col = shiftprop), size = 0.5)+
+#   theme_classic()+
+#   geom_point(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", size = 0.5, pch = 4)+
+#   geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_deg, y = delta_deg_zscore), col = "red", method = "lm", se = F)+
+#   facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
+#   ylab("Observed degree z-score") + xlab("Agent rank (degree)")
+# ggsave(deg_soc_z, filename = "fig/sims_plots/deg_soc_z.png", height = 7, width = 6)
+# 
+# str_soc_z <- ranked %>%
+#   filter(!is.na(shiftprop)) %>% # remove the random-shuffled one
+#   ggplot(aes(x = rank_str, y = delta_str_zscore, group = factor(shiftprop)))+
+#   geom_smooth(method = "lm", se = F, aes(col = shiftprop))+
+#   geom_point(aes(col = shiftprop), size = 0.5)+
+#   theme_classic()+
+#   geom_point(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", size = 0.5, pch = 4)+
+#   geom_smooth(data = ranked %>% filter(is.na(shiftprop)), aes(x = rank_str, y = delta_str_zscore), col = "red", method = "lm", se = F)+
+#   facet_wrap(~uniquesim, nrow = 3) +# should *not* set scales to "free"
+#   ylab("Observed strength z-score") + xlab("Agent rank (strength)")
+# ggsave(str_soc_z, filename = "fig/sims_plots/str_soc_z.png", height = 7, width = 6)

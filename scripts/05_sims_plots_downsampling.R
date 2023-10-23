@@ -71,7 +71,7 @@ test <- randomsdistdf %>%
 test %>%
   filter(iteration %in% 1:10, indiv == 1) %>%
   ggplot(aes(x = newday, y = dist, fill = factor(spd)))+geom_boxplot(position = position_dodge())+
-  facet_wrap(~simulation, nrow = 3) + theme_minimal() # okay, this confirms that the jumps are higher between days vs. within days. As we suspected. (Note: this is just for random--would expect much less deviation for conveyor.)
+  facet_wrap(~simulation, nrow = 3, scales = "free") + theme_minimal() # okay, this confirms that the jumps are higher between days vs. within days. As we suspected. (Note: this is just for random--would expect much less deviation for conveyor.)
 
 ## Now, what proportion of the locations are newday == T, for each spd?
 test %>%
