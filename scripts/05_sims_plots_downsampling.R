@@ -296,7 +296,7 @@ fp_ns_lm <- fp_long %>%
   xlab("Sampling frequency")+
   #geom_point(data = fp_long %>% filter(is.na(shiftprop)), aes(x = sampling_frequency, y = fp_rate), col = permutationColors[2], linewidth = 1.5)+
   geom_smooth(method = "lm", se = F, data = fp_long %>% filter(is.na(shiftprop)), aes(x = sampling_frequency, y = fp_rate), col = permutationColors[2], linewidth = 1.5)+
-  geom_point()+
+  #geom_point()+
   theme(strip.text.y = element_blank(),
         strip.background.y = element_blank(),
         axis.title = element_text(size = 14),
@@ -309,7 +309,7 @@ fp_ns_lm <- fp_long %>%
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         strip.background.x = element_blank())
-ggsave(fp_ns, file = "fig/sims_plots/fp_ns.png", width = 6, height = 8)
+ggsave(fp_ns_lm, file = "fig/sims_plots/fp_ns_lm.png", width = 6, height = 8)
 
 fp_ns_path <- fp_long %>%
   filter(!is.na(shiftprop)) %>%
