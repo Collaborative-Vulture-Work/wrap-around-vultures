@@ -5,6 +5,7 @@ library(lubridate)
 library(data.table)
 library(spatsoc)
 library(proxy)
+library(purrr)
 library(Polychrome) # for color palettes
 #devtools::install_github("kaijagahm/vultureUtils")
 # library(vultureUtils)
@@ -17,31 +18,24 @@ library(Polychrome) # for color palettes
 # Edited by Ryan Nguyen and Kaija Gahm
 # XXXK are notations by Kaija to indicate confusion/questions.
 
-#### model parameters and protocol selection for users to choose #######
-ToPlot=1#can be 0 (no plot) or 1 (create plots)- note this will slow the proccess a lot!!
-Color_indv=c(3,5,6,7,8,2,3,5,6,7,8,2)#if ToPlot=01 this determines how many individfuals to plot (currently 12). The colors for plotted individuas: 2-=red 3=green 5= light green 6 purpule 7 yelow 8 grey 
-
 simulateAgents <- function(N = 6, # Number of individuals in the population 
                            Days = 10, # Number of days to simulate
                            DayLength = 50, # Number of time steps per day (currently it is limited to 59 since i considered it as minutes within an hour)
                            Soc_Percep_Rng = 2000, #detection range (in meters) - indivduals within this range will be considered in the bias point in the relevan scenario of sociable agents. set to 0 if you want socially indiferent agents (or in the fixed pairs scenario) 
-                           PairedAgents = 0, # If 1 then simulates the paired agent scenario where agents are paired in their intial location and show attraction to their pair only, indiferent to the others.
-                           PairStartDist = 200, # If PairedAgents=1 this sets the Upper limit of the distance of the pairs. For the second individual in each pair the location will be random within this range from the first mate. 
                            Scl = 2000,
                            seed = NULL,
                            EtaCRW = 0.7, # The weight of the CRW component in the BCRW used to model the Indiv movement
-                           StpSize_ind = 9, # Mean step lengths of individuals;
+                           StpSize_ind = 7, # Mean step lengths of individuals;
                            StpStd_ind = 5, # Standard deviations of step lengths of individuals 
                            Kappa_ind = 4, # Concentration parameters of von Mises directional distributions used for individuals' movement
-                           ToPlot = 0,
                            quiet = F,
                            sim_3 = F,
                            HRChangeRadius = 0, # Radius in which new HR center is to be selected from the next day
                            HREtaCRW = 0.7, # parameters for HR BCRW
                            HRKappa_ind = 4, # controls how strongly vm distribution is centered on mu
-                           HRStpSize = 100,
-                           HRStpStd = 50,
-                           socialWeight = 0.5, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
+                           HRStpSize = 0.01,
+                           HRStpStd = 0.01,
+                           socialWeight = 0, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
                            sameStartingAngle = 0,
                            asocial = F
 ){
@@ -51,27 +45,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     set.seed(seed)
   }
   
-  # 2. If requested, plot the step size distributions --------------------------
-  if (ToPlot==1){
-    # 1. Density plot of step lengths
-    plot(density(rgamma(10000, 
-                        shape = StpSize_ind^2/StpStd_ind^2, 
-                        scale = StpStd_ind^2/StpSize_ind)))  
-    
-    # 2. Rose diagram of step directions
-    CircStats::rose.diag(CircStats::rvm(n=10000, 
-                                        mean = 0,
-                                        k = Kappa_ind),
-                         bins=72, 
-                         pch = 16, 
-                         cex = 1, 
-                         shrink = 1)
-  }
-  
   # 3. Prepare variables for storing data --------------------------------------
-  if(PairedAgents==1){ # If paired design, then no social perception range for other agents
-    Soc_Percep_Rng <- 0
-  } 
   # Calculate number of time steps
   N_timesteps <- Days*DayLength # Total number of time steps that will be simulated for each iteration
   
@@ -93,16 +67,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                           runif(n=1, min=-Scl/3, max=Scl/3 )) 
     HRCent[k, 1:2] <- XYind[[k]][1, ]
     
-    # If paired scenario: switch every other individual to be a pair with nearby location to the previous one
-    if((PairedAgents == 1) & (k %% 2 == 0)){
-      # Setting the start tlocation for the pair
-      XYind[[k]][1, ] <- XYind[[k-1]][1, ]+c(runif(n=2, min=-PairStartDist/2, 
-                                                   max=PairStartDist/2)) 
-      # Storing the initial distance from this pair
-      HRcenterDist[k/2] <- round(dist(rbind(XYind[[k-1]][1, ], c(XYind[[k]][1, ]))),
-                                 digit = 1) 
-      print(paste("pair:",k-1,"and",k, "distance",HRcenterDist[k/2] ))
-    }
   } # End loop on individuals 
   
   # If the HR's are going to be changing (sim2 or sim3), create a list to store daily HR centers, and set the initial values from HRCent above.
@@ -173,15 +137,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
         BiasPoint <- HRCentPerDay[[1]][Curr_indv, 1:2] # otherwise, bias toward the original home range center
       }
       
-      # if((PairedAgents == 1) & (Curr_indv %% 2 == 1)){
-      #   # Updating bias point as the mean of HR center and mate's last location
-      #   BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv+1]][Curr_timestep, ]))
-      # } 
-      # if((PairedAgents == 1) & (Curr_indv %% 2 == 0)){
-      #   # Update bias point as the mean of HR center and mate's previous location (before last step since he moved already)  
-      #   BiasPoint <- colMeans(rbind(BiasPoint, XYind[[Curr_indv-1]][Curr_timestep-1, ]))
-      # } 
-      
       # If another individual is within social perception range...
       if(min(Dist, na.rm = T) < Soc_Percep_Rng){
         if(socialWeight < 0 | socialWeight >1){stop("socialWeight must be a number between 0 and 1.")}
@@ -225,15 +180,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            Im(exp((0+1i) * Phi_ind[Curr_indv])))
       # Save the individual's next location
       XYind[[Curr_indv]][Curr_timestep + 1, ] <- XYind[[Curr_indv]][Curr_timestep, ] + step
-      
-      
-      ###### ploting the steps ########
-      if(Curr_indv <= length(Color_indv) & ToPlot==1 ){
-        # Plot only up to 6 indiv and only if ToPlot==1
-        StepAsLine <- sp::SpatialLines(list(sp::Lines(list(sp::Line(XYind[[Curr_indv]][Curr_timestep:(Curr_timestep+1) , ])), 
-                                                      ID = Curr_timestep) )) # Convert line to spatial object for plot
-        plot(StepAsLine, add = T, col = Color_indv[Curr_indv], lwd = 4) # Plot the buffer
-      } # Plot only up to 6 indiv
       
     } # End loop on individuals
     if(!quiet){print(c("done with timestep", Curr_timestep, "out of", N_timesteps))}
