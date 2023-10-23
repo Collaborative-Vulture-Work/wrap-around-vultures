@@ -67,7 +67,7 @@ p_s1_ns <- sim1_ns$XY %>%
   theme(legend.position = "none")+
   ggtitle("Scenario 1, non-sociable")
 #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
-ggsave(p_s1_ns, file = "fig/p_s1_ns.png", width = 6, height = 7)
+ggsave(p_s1_ns, file = "fig/trajectories/p_s1_ns.png", width = 6, height = 7)
 
 # sim1_socLevels <- map(socLevels, ~{
 #   sim <- simulateAgents(N = 30,
@@ -142,7 +142,7 @@ p_s1_s <- sim1_s$XY %>%
   theme(legend.position = "none")+
   ggtitle("Scenario 1, sociable")
 #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
-ggsave(p_s1_s, file = "fig/p_s1_s.png", width = 6, height = 7)
+ggsave(p_s1_s, file = "fig/trajectories/p_s1_s.png", width = 6, height = 7)
 
 # SIM 2 -------------------------------------------------------------------
 r <- 10 # home range steps are 10x the size of agent steps
@@ -198,7 +198,7 @@ p_s2_ns <- sim2_ns$XY %>%
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 2, non-sociable")
-ggsave(p_s2_ns, file = "fig/p_s2_ns.png", width = 6, height = 7)
+ggsave(p_s2_ns, file = "fig/trajectories/p_s2_ns.png", width = 6, height = 7)
 
 # sim2_socLevels <- map(socLevels, ~{
 #   sim <- simulateAgents(N = 30,
@@ -271,7 +271,7 @@ p_s2_s <- sim2_s$XY %>%
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 2, sociable")
-ggsave(p_s2_s, file = "fig/p_s2_s.png", width = 6, height = 7)
+ggsave(p_s2_s, file = "fig/trajectories/p_s2_s.png", width = 6, height = 7)
 
 # SIM 3 -------------------------------------------------------------------
 r <- 10 # home range steps are 10x the size of agent steps
@@ -327,7 +327,7 @@ p_s3_ns <- sim3_ns$XY %>%
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, non-sociable")
-ggsave(p_s3_ns, file = "fig/p_s3_ns.png", width = 7, height = 6)
+ggsave(p_s3_ns, file = "fig/trajectories/p_s3_ns.png", width = 7, height = 6)
 
 # sim3_socLevels <- map(socLevels, ~{
 #   sim3 <- simulateAgents(N = 30,
@@ -399,7 +399,7 @@ p_s3_s <- sim3_s$XY %>%
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, sociable")
-ggsave(p_s3_s, file = "fig/p_s3_s.png", width = 7, height = 6)
+ggsave(p_s3_s, file = "fig/trajectories/p_s3_s.png", width = 7, height = 6)
 
 # Put all 6 plots together, removing their titles
 a <- p_s1_ns + theme(title = element_blank())
@@ -411,9 +411,9 @@ f <- p_s3_s + theme(title = element_blank())
 trajectories_patchwork <- ((a+b)/(c+d)/(e+f))+
   theme(text = element_text('mono', size = 15))
 trajectories_patchwork
-ggsave(trajectories_patchwork, filename = "fig/trajectories_patchwork.png", width = 11, height = 16)
+ggsave(trajectories_patchwork, filename = "fig/trajectories/trajectories_patchwork.png", width = 11, height = 16)
 
 trajectories_patchwork_horizontal <- ((a+c+e)/(b+d+f))+
   theme(text = element_text('mono', size = 15))
 trajectories_patchwork_horizontal
-ggsave(trajectories_patchwork_horizontal, filename = "fig/trajectories_patchwork_horizontal.png", width = 16, height = 11)
+ggsave(trajectories_patchwork_horizontal, filename = "fig/trajectories/trajectories_patchwork_horizontal.png", width = 16, height = 11)
