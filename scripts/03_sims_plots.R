@@ -11,6 +11,7 @@ whichshift <- 5
 plots <- vector(mode = "list", length = length(uniquesims))
 for(i in 1:length(uniquesims)){
   usim <- unique(obs_stats_df$uniquesim)[i]
+  letter <- letters[i]
   datobs <- obs_stats_df %>% filter(uniquesim == usim) %>% as.data.frame()
   
   # Get the order for the x axis (based on observed), and arrange both observed and simulated to adhere to this order.
@@ -30,24 +31,29 @@ for(i in 1:length(uniquesims)){
     ggplot()+
     geom_boxplot(aes(x = ID1, y = strength, col = type, fill = type), position = position_dodge())+
     theme_classic()+
-    geom_point(data = datobs, aes(x = ID1, y = strength), col = "black")+
+    geom_point(data = datobs, aes(x = ID1, y = strength), col = "black", size = 2)+
     theme(axis.ticks.x = element_blank(),
           axis.text.x = element_blank(),
-          legend.position = "none",
-          axis.title = element_blank())+
-    ggtitle(usim)
+          axis.title = element_blank(),
+          #legend.position = "none"
+          )+
+    scale_fill_manual(name = "Permutation type", values = permutationColors)+
+    scale_color_manual(name = "Permutation type", values = permutationColors)+
+    labs(title = letter)+
+    NULL
   plots[[i]] <- p
 }
 
-test <- patchwork::wrap_plots(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], plots[[6]], ncol = 2, byrow = T)
-gt <- patchwork::patchworkGrob(test)
-str_6panel <- gridExtra::grid.arrange(gt, left = "Strength", bottom = "Ranked agents")
+test <- ggpubr::ggarrange(plotlist = plots, ncol = 2, nrow = 3, common.legend = TRUE, legend = "bottom") # I want to use ggarrange instead of patchwork because patchwork doesn't seem to allow for a common legend.
+test
+str_6panel <- test
 ggsave(str_6panel, filename = "fig/sims_plots/str_6panel.png", width = 7, height = 6)
 
 # 6-panel boxplot: degree
 plots <- vector(mode = "list", length = length(uniquesims))
 for(i in 1:length(uniquesims)){
   usim <- unique(obs_stats_df$uniquesim)[i]
+  letter <- letters[i]
   datobs <- obs_stats_df %>% filter(uniquesim == usim) %>% as.data.frame()
   
   # Get the order for the x axis (based on observed), and arrange both observed and simulated to adhere to this order.
@@ -67,18 +73,20 @@ for(i in 1:length(uniquesims)){
     ggplot()+
     geom_boxplot(aes(x = ID1, y = degree, col = type, fill = type), position = position_dodge())+
     theme_classic()+
-    geom_point(data = datobs, aes(x = ID1, y = degree), col = "black")+
+    geom_point(data = datobs, aes(x = ID1, y = degree), col = "black", size = 2)+
     theme(axis.ticks.x = element_blank(),
           axis.text.x = element_blank(),
-          legend.position = "none",
+          #legend.position = "none",
           axis.title = element_blank())+
-    ggtitle(usim)
+    scale_fill_manual(name = "Permutation type", values = permutationColors)+
+    scale_color_manual(name = "Permutation type", values = permutationColors)+
+    labs(title = letter)
   plots[[i]] <- p
 }
 
-test <- patchwork::wrap_plots(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], plots[[6]], ncol = 2, byrow = T)
-gt <- patchwork::patchworkGrob(test)
-deg_6panel <- gridExtra::grid.arrange(gt, left = "Degree", bottom = "Ranked agents")
+test <- ggpubr::ggarrange(plotlist = plots, ncol = 2, nrow = 3, common.legend = TRUE, legend = "bottom") # I want to use ggarrange instead of patchwork because patchwork doesn't seem to allow for a common legend.
+test
+deg_6panel <- test
 ggsave(deg_6panel, filename = "fig/sims_plots/deg_6panel.png", width = 7, height = 6)
 
 # Histograms: mean value vs. black

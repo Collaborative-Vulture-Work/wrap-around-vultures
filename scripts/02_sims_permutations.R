@@ -1,7 +1,7 @@
 library(tidyverse)
 library(tidytext)
 library(patchwork)
-source("scripts/functions.R")
+source("scripts/00.1_functions.R")
 
 # Load data ---------------------------------------------------------------
 load("data/simulations/sim1_ns.Rda")
