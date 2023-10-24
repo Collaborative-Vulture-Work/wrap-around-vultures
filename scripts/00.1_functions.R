@@ -495,7 +495,7 @@ theme_vulturePerm <- function(){
     )
 }
 
-permutationColors <- c("#3C8BBF", "red") # Colors to distinguish random vs. conveyor permutations
+permutationColors <- c("#173552", "red") # Colors to distinguish random vs. conveyor permutations
 snsColors <- c("darkolivegreen", "yellowgreen") # Colors to distinguish between non-social and social
 # shiftColors # A continuous scale to illustrate the amount of shift. For now using the default ggplot2 scale
 tencolors <- Polychrome::kelly.colors(13)[-1][-1][-7] # remove white and black and gray. Discrete colors for ten individuals

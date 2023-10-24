@@ -16,6 +16,7 @@ soc_nonsoc <- rep(c("ns", "s"), 3)
 
 # Make a list
 sims <- list(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)
+rm(c(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)) # remove these because we're not using them anymore
 
 # Extract just the XY coordinates
 sims_xy <- map(sims, "XY")
@@ -31,10 +32,10 @@ sims_xy <- map2(sims_xy, soc_nonsoc, ~.x %>% mutate(sns = .y))
 sims_xy <- map(sims_xy, ~.x %>% mutate(date = lubridate::date(datetime),
                                      time = stringr::str_extract(datetime, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}"),
                                      time = tidyr::replace_na(time, "00:00:00")))
-
+rm(sims)
 
 # PERMUTATIONS ------------------------------------------------------------
-n <- 50 # how many permutations?
+n <- 100 # how many permutations?
 
 # Conveyor permutations ---------------------------------------------------
 sms <- seq(from = 1, to = 25, by = 1)
