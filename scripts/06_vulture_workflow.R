@@ -1,11 +1,11 @@
-source("scripts/functions.R") # pulls in all the functions (written by Orr and Ryan)
+source("scripts/00.1_functions.R") # pulls in all the functions (written by Orr and Ryan)
 library(tidyverse)
 library(sf)
 library(vultureUtils)
 
 load("data/seasons.Rda") # load the cleaned seasons data taken from the MvmtSoc project
 seasonNames <- map_chr(seasons, ~as.character(.x$seasonUnique[1]))
-season_data <- seasons[[which(seasonNames == "2022_summer")]]
+season_data <- seasons[[which(seasonNames == "2023_summer")]]
 roostPolygons <- read_sf("./data/roosts50_kde95_cutOffRegion.kml")
 
 # Make date and time columns that can be used for rotations
