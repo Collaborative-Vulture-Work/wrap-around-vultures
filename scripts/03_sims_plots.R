@@ -35,7 +35,7 @@ for(i in 1:length(uniquesims)){
   p <- datperm %>%
     filter(!is.na(ID1)) %>% # XXX need to deal with NA values for ID1--they didn't have stats calculated for them
     ggplot()+
-    geom_boxplot(aes(x = ID1, y = strength, col = type, fill = type), position = position_dodge())+
+    geom_boxplot(aes(x = ID1, y = strength, col = type, fill = type), position = position_dodge(), outlier.size = 0.5)+
     theme_classic()+
     geom_point(data = datobs, aes(x = ID1, y = strength), col = "black", size = 2)+
     theme(axis.ticks.x = element_blank(),
@@ -83,8 +83,7 @@ test <- ggpubr::ggarrange(plotlist = fulls, ncol = 2, nrow = 3#,
                           #common.legend = TRUE, legend = "bottom"
                           ) # Common legend doesn't work if we do it like this. Let's just paste on another one.
 legend <- ggpubr::get_legend(plots[[1]])
-purpleOrangeLegend <- legend
-ggsave(purpleOrangeLegend, filename = "fig/sims_plots_purpleOrangeLegend.png", width = 7, height = 6)
+ggsave(legend, filename = "fig/sims_plots_legend.png", width = 7, height = 6)
 str_6panel <- test
 ggsave(str_6panel, filename = "fig/sims_plots/str_6panel.png", width = 7, height = 7)
 
@@ -111,7 +110,7 @@ for(i in 1:length(uniquesims)){
   p <- datperm %>%
     filter(!is.na(ID1)) %>% # XXX need to deal with NA values for ID1--they didn't have stats calculated for them
     ggplot()+
-    geom_boxplot(aes(x = ID1, y = degree, col = type, fill = type), position = position_dodge())+
+    geom_boxplot(aes(x = ID1, y = degree, col = type, fill = type), position = position_dodge(), outlier.size = 0.5)+
     theme_classic()+
     geom_point(data = datobs, aes(x = ID1, y = degree), col = "black", size = 2)+
     theme(axis.ticks.x = element_blank(),
@@ -157,10 +156,7 @@ fulls <- map2(plots, insets, ~.x + theme(legend.position = "none") + patchwork::
 
 test <- ggpubr::ggarrange(plotlist = fulls, ncol = 2, nrow = 3#, 
                           #common.legend = TRUE, legend = "bottom"
-) # Common legend doesn't work if we do it like this. Let's just paste on another one.
-# legend <- ggpubr::get_legend(plots[[1]])
-# purpleOrangeLegend <- legend
-# ggsave(purpleOrangeLegend, filename = "fig/sims_plots_purpleOrangeLegend.png", width = 7, height = 6)
+)
 deg_6panel <- test
 ggsave(deg_6panel, filename = "fig/sims_plots/deg_6panel.png", width = 7, height = 7)
 
