@@ -37,14 +37,14 @@ for(i in 1:length(uniquesims)){
     ggplot()+
     geom_boxplot(aes(x = ID1, y = strength, col = type, fill = type), position = position_dodge(), outlier.size = 0.5)+
     theme_classic()+
-    geom_point(data = datobs, aes(x = ID1, y = strength), col = "black", size = 2)+
+    geom_point(data = datobs, aes(x = ID1, y = strength), col = "black", size = 2, pch = 1)+
     theme(axis.ticks.x = element_blank(),
           axis.text.x = element_blank(),
           axis.title = element_blank(),
           legend.position = "bottom",
           panel.background = element_rect(fill = "transparent"),
           plot.background = element_rect(fill = "transparent", color = NA)
-          )+
+    )+
     scale_fill_manual(name = "Permutation type", values = permutationColors)+
     scale_color_manual(name = "Permutation type", values = permutationColors)+
     labs(title = letter)+
@@ -68,20 +68,22 @@ for(i in 1:length(uniquesims)){
     theme_classic()+
     coord_flip()+
     theme(axis.text.y = element_text(size = 6),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank(),
-          axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),
+          axis.text.x = element_blank(),
           legend.position = "none")+
+    {if(i != 6)theme(axis.title.x = element_blank(),
+                     axis.title.y = element_blank())}+
+    {if(i == 6)ylab("Mean strength")}+
+    {if(i == 6)xlab("Frequency")}+
     scale_color_manual(name = "Permutation type", values = permutationColors)
   insets[[i]] <- miniplot
 }
 
-fulls <- map2(plots, insets, ~.x + theme(legend.position = "none") + patchwork::inset_element(.y, 0.5, 0.5, 1, 1, clip = FALSE, on_top = FALSE))
+fulls <- map2(plots, insets, ~.x + theme(legend.position = "none") + patchwork::inset_element(.y, 0.5, 0.5, 1, 1.1, clip = FALSE, on_top = FALSE))
 
 test <- ggpubr::ggarrange(plotlist = fulls, ncol = 2, nrow = 3#, 
                           #common.legend = TRUE, legend = "bottom"
-                          ) # Common legend doesn't work if we do it like this. Let's just paste on another one.
+) # Common legend doesn't work if we do it like this. Let's just paste on another one.
 legend <- ggpubr::get_legend(plots[[1]])
 ggsave(legend, filename = "fig/sims_plots_legend.png", width = 7, height = 6)
 str_6panel <- test
@@ -112,7 +114,7 @@ for(i in 1:length(uniquesims)){
     ggplot()+
     geom_boxplot(aes(x = ID1, y = degree, col = type, fill = type), position = position_dodge(), outlier.size = 0.5)+
     theme_classic()+
-    geom_point(data = datobs, aes(x = ID1, y = degree), col = "black", size = 2)+
+    geom_point(data = datobs, aes(x = ID1, y = degree), col = "black", size = 2, pch = 1)+
     theme(axis.ticks.x = element_blank(),
           axis.text.x = element_blank(),
           axis.title = element_blank(),
@@ -201,7 +203,9 @@ shifthistrs_str <- summ %>%
         axis.text.x = element_text(size = 10),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.title = element_text(size = 14))+
+        axis.title = element_text(size = 14),
+        panel.spacing.x = unit(1, "lines")
+        )+
   geom_vline(data = obs_summ, aes(xintercept = mnstr), linetype = 2)+
   ylab("Frequency")+xlab("Mean strength")+
   labs(color = "Shift proportion")
@@ -255,7 +259,7 @@ shiftprop_mnmndeg <- summsumm %>%
   filter(type == "conveyor") %>%
   ggplot(aes(x = shiftprop, y = mnmndeg, col = sociable))+
   geom_point(size = 3)+
-  geom_path(linewidth = 1.5)+
+  geom_path(linewidth = 1)+
   facet_wrap(~scenario, scales = "free", ncol = 1)+
   theme_classic()+
   geom_hline(data = horizlines, aes(yintercept = mndeg, col = sociable, lty = type), linewidth = 1)+
@@ -268,7 +272,7 @@ shiftprop_mnmndeg <- summsumm %>%
         strip.text = element_blank(),
         legend.title = element_blank(),
         axis.title = element_text(size = 14),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         axis.text = element_text(size = 12))
 shiftprop_mnmndeg
 ggsave(shiftprop_mnmndeg, file = "fig/sims_plots/shiftprop_mnmndeg.png", width = 4, height = 10)
@@ -277,7 +281,7 @@ shiftprop_mnmnstr <- summsumm %>%
   filter(type == "conveyor") %>%
   ggplot(aes(x = shiftprop, y = mnmnstr, col = sociable))+
   geom_point(size = 3)+
-  geom_path(linewidth = 1.5)+
+  geom_path(linewidth = 1)+
   facet_wrap(~scenario, scales = "free", ncol = 1)+
   theme_classic()+
   geom_hline(data = horizlines, aes(yintercept = mnstr, col = sociable, lty = type), linewidth = 1)+
@@ -290,7 +294,7 @@ shiftprop_mnmnstr <- summsumm %>%
         strip.text = element_blank(),
         legend.title = element_blank(),
         axis.title = element_text(size = 14),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         axis.text = element_text(size = 12))
 shiftprop_mnmnstr
 ggsave(shiftprop_mnmnstr, file = "fig/sims_plots/shiftprop_mnmnstr.png", width = 4, height = 10)

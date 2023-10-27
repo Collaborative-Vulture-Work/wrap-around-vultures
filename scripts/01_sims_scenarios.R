@@ -371,18 +371,29 @@ p_s3_s <- sim3_s$XY %>%
 ggsave(p_s3_s, file = "fig/trajectories/p_s3_s.png", width = 7, height = 6)
 
 # Put all 6 plots together, removing their titles
-a <- p_s1_ns + theme(title = element_blank())
-b <- p_s1_s + theme(title = element_blank())
-c <- p_s2_ns + theme(title = element_blank())
-d <- p_s2_s + theme(title = element_blank())
-e <- p_s3_ns + theme(title = element_blank())
-f <- p_s3_s + theme(title = element_blank())
-trajectories_patchwork <- ((a+b)/(c+d)/(e+f))+
-  theme(text = element_text('mono', size = 15))
+a <- p_s1_ns + theme(title = element_blank())+ylim(c(-475, 400))+xlim(c(-500, 400))
+b <- p_s1_s + theme(title = element_blank(),
+                    axis.text.y = element_blank())+ylim(c(-475, 400))+xlim(c(-500, 400))
+
+c <- p_s2_ns + theme(title = element_blank())+ ylim(c(-1200, 1100))+xlim(c(-1000, 900))
+d <- p_s2_s + theme(title = element_blank(),
+                    axis.text.y = element_blank())+ ylim(c(-1200, 1100))+xlim(c(-1000, 900))
+
+e <- p_s3_ns + theme(title = element_blank())+xlim(c(-500, 3100))+ylim(c(-3100, 3400))
+f <- p_s3_s + theme(title = element_blank(),
+                    axis.text.y = element_blank())+xlim(c(-500, 3100))+ylim(c(-3100, 3400))
+
+trajectories_patchwork <- ggpubr::ggarrange(plotlist = list(a, b, c, d, e, f), ncol = 2, nrow = 3, labels = "auto", label.x = 0.05, font.label = list(size = 22))
 trajectories_patchwork
 ggsave(trajectories_patchwork, filename = "fig/trajectories/trajectories_patchwork.png", width = 11, height = 16)
 
-trajectories_patchwork_horizontal <- ((a+c+e)/(b+d+f))+
-  theme(text = element_text('mono', size = 15))
-trajectories_patchwork_horizontal
-ggsave(trajectories_patchwork_horizontal, filename = "fig/trajectories/trajectories_patchwork_horizontal.png", width = 16, height = 11)
+# This one would need to be re-done, removing different axis labels, or not removing any axis labels at all.
+# trajectories_patchwork_horizontal <- ((a+c+e)/(b+d+f))+
+#   theme(text = element_text('mono', size = 15))
+# trajectories_patchwork_horizontal
+# ggsave(trajectories_patchwork_horizontal, filename = "fig/trajectories/trajectories_patchwork_horizontal.png", width = 16, height = 11)
+
+# Daily displacement distances for each simulation ------------------------
+# Trajectory-long displacements -------------------------------------------
+
+
