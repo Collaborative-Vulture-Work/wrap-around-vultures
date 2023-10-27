@@ -16,7 +16,7 @@ soc_nonsoc <- rep(c("ns", "s"), 3)
 
 # Make a list
 sims <- list(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)
-rm(c(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)) # remove these because we're not using them anymore
+rm(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s) # remove these because we're not using them anymore
 
 # Extract just the XY coordinates
 sims_xy <- map(sims, "XY")

@@ -3,10 +3,13 @@ library(tidyverse)
 library(sf)
 library(vultureUtils)
 
-load("data/seasons.Rda") # load the cleaned seasons data taken from the MvmtSoc project
-seasonNames <- map_chr(seasons, ~as.character(.x$seasonUnique[1]))
-season_data <- seasons[[which(seasonNames == "2023_summer")]]
+# load("data/seasons.Rda") # load the cleaned seasons data taken from the MvmtSoc project
+# seasonNames <- map_chr(seasons, ~as.character(.x$seasonUnique[1]))
+# season_data <- seasons[[which(seasonNames == "2022_summer")]]
+# save(season_data, file = "data/vulture_permutations/season_data.Rda")
+load("data/vulture_permutations/season_data.Rda")
 roostPolygons <- read_sf("./data/roosts50_kde95_cutOffRegion.kml")
+rm(seasons)
 
 # Make date and time columns that can be used for rotations
 season_data$date <- lubridate::date(season_data$timestamp)
@@ -14,8 +17,67 @@ season_data$time <- stringr::str_extract(season_data$timestamp, pattern = "[0-9]
 season_data$time <- replace_na(season_data$time, "00:00:00")
 season_data <- st_drop_geometry(season_data)
 
-n <- 50 # number of permutations
-sm <- 5 # can shift 5 days in either direction, 10 day range total
+# Calculate movement metrics ----------------------------------------------
+# How many days were individuals tracked?
+season_data %>% group_by(Nili_id) %>% sf::st_drop_geometry() %>% summarize(n = length(unique(dateOnly))) %>% arrange(desc(n)) %>% summarize(mn = mean(n), min = min(n), max = max(n), sd = sd(n))
+
+# Daily distance traveled and max displacement
+head(season_data)
+# flightmetrics_summer2022 <- calc_metrics(season_data)
+# save(flightmetrics_summer2022, file = "data/vulture_permutations/flightmetrics_summer2022.Rda")
+load("data/vulture_permutations/flightmetrics_summer2022.Rda")
+
+flightmetrics_summer2022 %>%
+  ungroup() %>%
+  summarize(mn_ddt = mean(ddt),
+            sd_ddt = sd(ddt),
+            min_ddt = min(ddt),
+            max_ddt = max(ddt),
+            mn_dd = mean(dd),
+            sd_dd = sd(dd),
+            min_dd = min(dd),
+            max_dd = max(dd)) %>%
+  pivot_longer(cols = everything(), names_to = "measure", values_to = "value") %>%
+  mutate(value = value/1000)
+
+# Make a plot of the vulture trajectories
+vultures <- unique(season_data$Nili_id)
+set.seed(3)
+random_vultures <- sample(vultures, 3)
+mindate <- min(season_data$dateOnly)
+maxdate <- mindate + 50
+
+forplot <- season_data %>%
+  filter(dateOnly >= mindate, dateOnly <= maxdate) %>%
+  dplyr::mutate(toshow = dplyr::case_when(Nili_id %in% random_vultures ~ T,
+                            TRUE ~F)) %>%
+  sf::st_transform(32636) %>%
+  mutate(x = sf::st_coordinates(.)[,1],
+         y = sf::st_coordinates(.)[,2]) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(Nili_id, toshow, timestamp, x, y) %>%
+  dplyr::arrange(Nili_id, timestamp)
+
+vultures <- forplot %>%
+  filter(toshow) %>%
+  #filter(y < 3450000, y > 3400000, x > 650000, x < 730000) %>%
+  ggplot(aes(x, y, col = Nili_id))+
+  geom_path(linewidth = 1.5, alpha = 0.9)+
+  theme_minimal()+
+  scale_color_manual(values = as.character(tencolors))+
+  theme(legend.position = "none")+
+  geom_path(data = forplot %>% filter(!toshow), alpha = 0.1, linewidth = 0.1, col = "black")+
+  theme(axis.title = element_blank())+
+  NULL
+
+ggsave(vultures, filename = "fig/vulture_permutations_plots/vultures.png", width = 7, height = 7)
+
+# Do some permutations ----------------------------------------------------
+
+n <- 100 # number of permutations
+length(unique(season_data$dateOnly)) #124 days
+# Let's do roughly 20% of that... so 24ish days. so sm should be 12.
+sm <- 12 # can shift 12 days in either direction, 24 day range total
 
 # Run the conveyor permutations
 realizations_conveyor_v <- vector(mode = "list", length = n)
@@ -29,7 +91,7 @@ realizations_conveyor_v <- realizations_conveyor_v %>%
         rename(oldtimestamp = timestamp,
                timestamp = newdatetime))
 save(realizations_conveyor_v, file = "data/vulture_permutations/realizations_conveyor_v.Rda")
-load("data/vulture_permutations/realizations_conveyor_v.Rda")
+#load("data/vulture_permutations/realizations_conveyor_v.Rda")
 
 # Run the random permutations
 random_data <- season_data
@@ -43,7 +105,7 @@ realizations_random_v <- as.data.frame(randomizations(DT = random_data, type = "
   map(., ~bind_cols(.x, toJoin))
 realizations_random_v <- map(realizations_random_v, ~.x %>% mutate(dateOnly = lubridate::date(timestamp)))
 save(realizations_random_v, file = "data/vulture_permutations/realizations_random_v.Rda")
-load("data/vulture_permutations/realizations_random_v.Rda")
+#load("data/vulture_permutations/realizations_random_v.Rda")
 
 
 # Transform both to sf

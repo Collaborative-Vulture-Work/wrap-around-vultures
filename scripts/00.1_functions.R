@@ -495,9 +495,42 @@ theme_vulturePerm <- function(){
     )
 }
 
-permutationColors <- c("#173552", "red") # Colors to distinguish random vs. conveyor permutations
+permutationColors <- c("#25496C", "#FF7F00") # Colors to distinguish random vs. conveyor permutations
 snsColors <- c("darkolivegreen", "yellowgreen") # Colors to distinguish between non-social and social
 # shiftColors # A continuous scale to illustrate the amount of shift. For now using the default ggplot2 scale
 tencolors <- Polychrome::kelly.colors(13)[-1][-1][-7] # remove white and black and gray. Discrete colors for ten individuals
 Polychrome::swatch(tencolors) # view the colors
 continuousColors <- c("#00243C", "#50BAFF")
+
+# Functions to calculate displacement and distance, taken from the --------
+calc_displacements <- function(group) {
+  start_point <- dplyr::first(group$geometry)
+  group %>%
+    dplyr::mutate(
+      disp_from_start = as.vector(sf::st_distance(geometry, start_point)),
+      dist_to_prev = as.vector(sf::st_distance(geometry, dplyr::lag(geometry, default = dplyr::first(geometry)), by_element = T))
+    )
+}
+
+calc_metrics <- function(data){
+  # split the data by Nili_id and dateOnly
+  groups <- data %>%
+    dplyr::group_split(Nili_id, dateOnly)
+  
+  # run the distance calculations
+  disp_data <- purrr::map(groups, calc_displacements, .progress = TRUE) %>% 
+    purrr::list_rbind()
+  
+  # group the data by Nili_id and dateOnly, and calculate the metrics
+  result <- disp_data %>%
+    sf::st_drop_geometry() %>%
+    dplyr::group_by(Nili_id, dateOnly) %>%
+    arrange(timestamp, .by_group = T) %>%
+    mutate(csDist = cumsum(replace_na(dist_to_prev, 0))) %>%
+    dplyr::summarize(
+      dmd = max(disp_from_start, na.rm = T),
+      dd = last(disp_from_start, na.rm = T),
+      ddt = sum(dist_to_prev, na.rm = T)
+    )
+  return(result)
+}

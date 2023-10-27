@@ -1,7 +1,7 @@
 library(tidyverse)
 library(tidytext)
 library(patchwork)
-source("scripts/functions.R")
+source("scripts/00.1_functions.R")
 
 # Load data ---------------------------------------------------------------
 load("data/simulations/sim1_ns.Rda")
@@ -16,6 +16,7 @@ soc_nonsoc <- rep(c("ns", "s"), 3)
 
 # Make a list
 sims <- list(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)
+rm(sim1_ns, sim1_s, sim2_ns, sim2_s, sim3_ns, sim3_s)
 
 # Extract just the XY coordinates
 sims_xy <- map(sims, "XY")
@@ -26,6 +27,7 @@ sims_xy <- map(sims_xy, fix_times)
 # Label the simulation data
 sims_xy <- map2(sims_xy, simulations, ~.x %>% mutate(sim = .y))
 sims_xy <- map2(sims_xy, soc_nonsoc, ~.x %>% mutate(sns = .y))
+rm(sims)
 
 # Create separate date and time columns
 sims_xy <- map(sims_xy, ~.x %>% mutate(date = lubridate::date(datetime),
