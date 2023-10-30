@@ -17,24 +17,35 @@ library(Polychrome) # for color palettes
 ## writen by Orr Spiegel Jan 2016. contact me at orr.spiegel@mail.huji.ac.il if you need further help ###
 # Edited by Ryan Nguyen and Kaija Gahm
 # XXXK are notations by Kaija to indicate confusion/questions.
-
+#
+# Simulation 1 (static bias):
+# set sim_3 to F and HRChangeRadius to 0
+# agents will be biased towards a constant bias point throughout the simulation
+#
+# Simulation 2 (local bias):
+# set sim_3 to F and HRChangeRadius to desired value
+# bias points will change at a radius of HRChangeRadius per day
+#
+# Simulation 3 (directional bias):
+# set sim_3 to T and corresponding movement parameters HREtaCRW, HRKappa_ind, HRStpSize, HRStpStd to desired values
+# bias points will move according to a CRW with those parameters
 simulateAgents <- function(N = 6, # Number of individuals in the population 
                            Days = 10, # Number of days to simulate
                            DayLength = 50, # Number of time steps per day (currently it is limited to 59 since i considered it as minutes within an hour)
                            Soc_Percep_Rng = 2000, #detection range (in meters) - indivduals within this range will be considered in the bias point in the relevan scenario of sociable agents. set to 0 if you want socially indiferent agents (or in the fixed pairs scenario) 
-                           Scl = 2000,
+                           Scl = 2000, # scale of starting coords 
                            seed = NULL,
                            EtaCRW = 0.7, # The weight of the CRW component in the BCRW used to model the Indiv movement
                            StpSize_ind = 7, # Mean step lengths of individuals;
                            StpStd_ind = 5, # Standard deviations of step lengths of individuals 
                            Kappa_ind = 4, # Concentration parameters of von Mises directional distributions used for individuals' movement
-                           quiet = F,
-                           sim_3 = F,
-                           HRChangeRadius = 0, # Radius in which new HR center is to be selected from the next day
-                           HREtaCRW = 0.7, # parameters for HR BCRW
+                           quiet = F, 
+                           sim_3 = F, # directional movement
+                           HRChangeRadius = 0, # Radius in which new HR center is to be selected from the next day (local movement)
+                           HREtaCRW = 0.7, # Weight towards previous direction
                            HRKappa_ind = 4, # controls how strongly vm distribution is centered on mu
-                           HRStpSize = 0.01,
-                           HRStpStd = 0.01,
+                           HRStpSize = 0.01, # Mean step lengths of HRs
+                           HRStpStd = 0.01,  # STD of step lengths of HRs
                            socialWeight = 0, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
                            sameStartingAngle = 0,
                            asocial = F
@@ -45,11 +56,11 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     set.seed(seed)
   }
   
-  # 3. Prepare variables for storing data --------------------------------------
+  # 2. Prepare variables for storing data --------------------------------------
   # Calculate number of time steps
   N_timesteps <- Days*DayLength # Total number of time steps that will be simulated for each iteration
   
-  # 4. Set starting conditions -------------------------------------------------
+  # 3. Set starting conditions -------------------------------------------------
   startIndx <- 1
   Phi_ind <- rep(0, N) # Direction of the last step for the individuals
   XYind <- vector(mode = "list") # This list will store the matrices of locations of all individuals
@@ -57,7 +68,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   HRCent[,3] <- rep(c(1,2), length.out = nrow(HRCent)) # Assign sex 
   HRcenterDist <- rep(0, N/2) # Initial distance between pairs of agents
 
-  # 6. Set initial conditions for individuals ----------------------------------
+  # 4. Set initial conditions for individuals ----------------------------------
   # Loop on individuals: set initial conditions
   for (k in 1:N) {
     # Place agents in their initial positions
@@ -69,6 +80,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     
   } # End loop on individuals 
   
+  # 5. Set initial HR storage
   # If the HR's are going to be changing (sim2 or sim3), create a list to store daily HR centers, and set the initial values from HRCent above.
   HRCentPerDay <- vector(mode = "list", length = Days)
   HRCentPerDay[[1]] <- HRCent
@@ -82,7 +94,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     HRPhi_ind <- rep(0, N) # Direction of the last step for the HRs
   }
   
-  # 7. Run the simulation ----------------------------------
+  # 6. Run the simulation ----------------------------------
   # Loop on time steps and individuals to run the simulation
   dayCount <- 1 # start on day 1
   for(Curr_timestep in 1:(N_timesteps-1)){
@@ -92,7 +104,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       newDay <- Curr_timestep %% DayLength == 0 ## && and %% are for scalars not vectors, change every day
       if(newDay){ # If this is the start of a new day... 
         dayCount <- dayCount + 1
-        if(HRChangeRadius > 0){ # uniform radius HR change (sim 2)
+        if(HRChangeRadius > 0 && !sim_3){ # uniform radius HR change (sim 2)
           randomAngles <- runif(N, min = 0, 2 * pi) # sample angle from 0-2pi per individual
           randomLengths <- HRChangeRadius * sqrt(runif(N)) # https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly #
           # get random XY to add to existing HR to move
@@ -101,7 +113,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           randomXY <- cbind(randomX, randomY) 
           HRCentPerDay[[dayCount]] <- HRCentPerDay[[dayCount-1]]
           HRCentPerDay[[dayCount]][, 1:2] <- HRCentPerDay[[dayCount]][, 1:2] + randomXY # move HR centers
-        }else if(sim_3 > 0){ # vm HR change
+        }else if(sim_3){ # vm HR change
           mu <- HRCentPerDay[[dayCount - 1]][, 3] # get list of old mus
           HRmu.av <- Arg(HREtaCRW * exp(HRPhi_ind * (0+1i)) + (1 - HREtaCRW) * exp(mu * (0+1i))) # averages between old direction and new mu based on HREtaCRW
           HRPhi_ind <- sapply(HRmu.av, function(x){CircStats::rvm(n = 1, mean = x, k = HRKappa_ind)}) # sample new mus
@@ -147,7 +159,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)
           BiasPoint <- meanpoint
         }
-        else
+        else # asocial scenario: bias away from individuals and towards bias
         {
           toOther <- otherIndivLoc - XYind[[Curr_indv]][Curr_timestep, ]
           awayOther <- -1 * toOther
@@ -184,6 +196,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     } # End loop on individuals
     if(!quiet){print(c("done with timestep", Curr_timestep, "out of", N_timesteps))}
   } # End loop on time steps
+  
+  # C. Save data
   
   # Create a list for output with three slots: hr centers, and xy coordinates
   rName <- paste("sim", N_timesteps, N, 100*EtaCRW, StpSize_ind, ".rdata", sep = "_")
@@ -222,13 +236,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   return(out)
 }
 
-
-
-#test <- simulateAgents(N = 5, Days = 10)
-# save(list("HRCent" = HRCent, "XY" = XYind_log2), file = Name1)
-# save(list=ls(),file=Name1)
-# R.matlab::writeMat(con = Name2, XY = XYind_log2, HRCent = HRCent) 
-
 # 2. fix_times ------------------------------------------------------------
 # changes day and step to posix. This used to be load_data. You now have to do the loading by yourself. It's too weird to include the process of loading a .Rda file in a function because of the weird naming thing. See implementation of this in workflow.R
 # The input data is the $XY portion of the list returned by simulateAgents().
@@ -240,7 +247,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
 
 fix_times <- function(simulation_data, sampling_interval = 10){
   start_time <- as.POSIXct("2023-08-11 23:50")  # note simulation data starts on day 1 step 1 so the mindate will be 8-13 00:00
-  simulation_data <- simulation_data %>%
+  simulation_data <- simulation_data %>% # start date is arbitrarily chosen so that posix can be used by spatsoc
     dplyr::mutate(datetime = start_time + lubridate::days(day) + lubridate::minutes(StepInDay * sampling_interval)) %>%
     dplyr::select(indiv, X, Y, datetime)
   return(simulation_data)
@@ -252,10 +259,10 @@ get_edgelist <- function(data, idCol, dateCol){
   if(is.data.frame(data))
     data <- data.table::setDT(data)
   timegroup_data <- spatsoc::group_times(data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
-  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('X','Y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE)
+  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('X','Y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE) # 14 units is twice mean step length of indivs
 }
 
-# 5 rotate_data_table ------------------------------------------------------------
+# 4. rotate_data_table ------------------------------------------------------------
 # Note: this no longer actually takes a data_table, just keeping the name for consistency with previous.
 # Unlike the previous function, this one requires that you separate the dates and times into separate columns beforehand.
 rotate_data_table <- function(dataset, shiftMax, idCol = "indiv", dateCol = "date", timeCol = "time"){
@@ -297,19 +304,20 @@ rotate_data_table <- function(dataset, shiftMax, idCol = "indiv", dateCol = "dat
   return(out)
 }
 
-# 6. get_stats ------------------------------------------------------------
+# 5. get_stats ------------------------------------------------------------
+# get degree, mean sri, and strength per individual
 get_stats <- function(edgelist, data){
   associations <- edgelist %>%
     dplyr::count(ID1) %>%
-    dplyr::rename("associations" = "n")
+    dplyr::rename("associations" = "n") # count number of edges per indiv
   
   degree <- edgelist %>%
     dplyr::group_by(ID1) %>%
-    dplyr::summarise(degree = n_distinct(ID2), .groups = "drop")
+    dplyr::summarise(degree = n_distinct(ID2), .groups = "drop") # count distinct edges
   
-  sri_per_edge <- calcSRI(dataset = data, edges = edgelist, idCol = "indiv", timegroupCol = "timegroup")
+  sri_per_edge <- calcSRI(dataset = data, edges = edgelist, idCol = "indiv", timegroupCol = "timegroup") # calculate SRI
   
-  mean_sri_and_strength <- sri_per_edge %>%
+  mean_sri_and_strength <- sri_per_edge %>% # get mean sri and strength
     dplyr::group_by(ID1) %>%
     dplyr::summarise(mean_sri = mean(sri),
                      strength = sum(sri, na.rm = T), .groups = "drop")
@@ -319,7 +327,8 @@ get_stats <- function(edgelist, data){
   return(stats)
 }
 
-# 7. mean_stats -----------------------------------------------------------
+# 6. mean_stats -----------------------------------------------------------
+# gets the mean stats for the entire network graph, given a data frame of the network's stats from get_stats
 mean_stats <- function(stats){
   mean_stats <- stats %>%
     dplyr::summarise(mean_associations = mean(associations), 
@@ -331,7 +340,8 @@ mean_stats <- function(stats){
 }
 
 
-# 8. get_realization_data -------------------------------------------------
+# 7. get_realization_data -------------------------------------------------
+# runs n realizations of the permutation method and returns stats per sim
 get_realization_data <- function(simulation_data, n, quiet = F){ #XXXK: need to generalize idCol and dateCol, but I don't know how to do that with data.table.
   realization_data <- data.frame()
   time_to_rotate <- Sys.time()
@@ -340,17 +350,18 @@ get_realization_data <- function(simulation_data, n, quiet = F){ #XXXK: need to 
       print(paste("Working on realization", x))
     }
     
-    rotated_data <- rotate_data_table(simulation_data, idCol = "indiv", dateCol = "datetime")
-    rotated_edgelist <- get_edgelist(rotated_data, idCol = "indiv", dateCol = "datetime")
-    stats <- get_stats(rotated_edgelist)
+    rotated_data <- rotate_data_table(simulation_data, idCol = "indiv", dateCol = "datetime") # rotate sim data
+    rotated_edgelist <- get_edgelist(rotated_data, idCol = "indiv", dateCol = "datetime") # get edgelist of rotated data
+    stats <- get_stats(rotated_edgelist) # get stats 
     average_stats <- mean_stats(stats)
-    realization_data <- rbind(realization_data, average_stats)
+    realization_data <- rbind(realization_data, average_stats) # record stats of all realizations
   }
   print(Sys.time() - time_to_rotate)
   return(realization_data)
 }
 
-# calcSRI -----------------------------------------------------------------
+# 8. calcSRI -----------------------------------------------------------------
+# Calculate SRIs of edgelist
 # XXX This is pasted in from vultureUtils for now because I was having trouble installing it. Need to fix that.
 calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup", dateCol = "datetime"){
   if(!(timegroupCol %in% names(dataset))){
@@ -422,7 +433,7 @@ calcSRI <- function(dataset, edges, idCol = "Nili_id", timegroupCol = "timegroup
   return(dfSRI)
 }
 
-# ?. get_tortuosity ------------------------------------------------------------
+# 9. get_tortuosity ------------------------------------------------------------
 # Returns the tortuosity per individual path, given sim XY data
 # Each row represents an individual
 get_tortuosity <- function(data){
