@@ -239,102 +239,103 @@ source("scripts/00.1_functions.R")
 #   geom_line(data = id1_ran %>% filter(simulation == 1, step %in% 1:100, spd == 50), aes(x = step, y = dist), col = "red")
 
 # False positive rate vs. jump percentage ---------------------------------
-# Defining a false positive as when the observed value for an individual deviates from the mean of the simulations for that individual significantly.
-# Now we can stop dealing with the distances and start dealing with the stats.
 head(stats_obs_downsampled)
 head(stats_perm_downsampled)
 stats_perm_downsampled <- stats_perm_downsampled %>%
   mutate(uniquesim = paste(sim, sns, sep = "_"))
 
-diffs <- stats_perm_downsampled %>%
-  left_join(stats_obs_downsampled %>% select(ID1, uniquesim, spd, "degree_obs" = degree, "str_obs" = strength), by = c("ID1", "uniquesim", "spd")) %>%
-  select(ID1, uniquesim, spd, shift, iteration, degree, degree_obs, strength, str_obs, type)
+perm_means <- stats_perm_downsampled %>%
+  group_by(uniquesim, spd, shift, type, iteration) %>%
+  summarize(mndeg = mean(degree, na.rm = T),
+            mnstr = mean(strength, na.rm = T)) %>%
+  ungroup()
 
-diffs_pvals <- diffs %>%
-  ungroup() %>%
-  group_by(ID1, uniquesim, spd, shift, type) %>%
-  summarize(degree_diff_from_mean = degree_obs - mean(degree, na.rm = T),
-            degree_n_less = sum(degree < degree_obs, na.rm = T),
-            degree_n_more = sum(degree > degree_obs, na.rm = T),
-            degree_n_same = sum(degree == degree_obs, na.rm = T),
-            str_diff_from_mean = str_obs - mean(strength, na.rm  =T),
-            str_n_less = sum(strength < str_obs, na.rm = T),
-            str_n_more = sum(strength > str_obs, na.rm = T),
-            str_n_same = sum(strength == str_obs, na.rm = T)) %>% # why doesn't this return 1 row per group??
-  distinct() # reduces it down to way fewer rows
+obs_means <- stats_obs_downsampled %>%
+  group_by(uniquesim, spd) %>%
+  summarize(mndeg_obs = mean(degree, na.rm = T),
+            mnstr_obs = mean(strength, na.rm = T)) %>%
+  ungroup()
 
-glimpse(diffs_pvals)
+means <- left_join(perm_means, obs_means, by = c("uniquesim", "spd"))
+nrow(means) == nrow(perm_means)
 
-# get just false positives (non-social case). A false positive is when an individual's diff from mean is <0 AND it is significantly different from 0.
-fp <- diffs_pvals %>%
-  filter(grepl("ns", uniquesim)) %>%
-  mutate(deg_fp_pval = (degree_n_more+degree_n_same)/50, 
-         str_fp_pval = (str_n_more+str_n_same)/50) %>%
-  select(ID1, uniquesim, spd, shift, type, deg_fp_pval, str_fp_pval) %>%
+# Calculate the 2-tailed p-value for each of these shiftMaxes and levels of rarefaction
+pvals <- means %>% 
   group_by(uniquesim, spd, shift, type) %>%
-  summarize(deg_fp_rate = sum(deg_fp_pval < 0.05)/n(),
-            str_fp_rate = sum(str_fp_pval < 0.05)/n()) %>%
-  mutate(sampling_frequency = spd/50,
-         shiftprop = (shift*2)/50) 
+  summarize(less_deg = sum(mndeg <= mndeg_obs),
+            less_str = sum(mnstr <= mnstr_obs),
+            quant_deg = less_deg/n(),
+            quant_str = less_str/n()) %>%
+  ungroup() %>%
+  rowwise() %>% # have to do this in order to calculate the min for each row, instead of the min overall.
+  mutate(p2_deg = min(quant_deg, (1-quant_deg))*2,
+         p2_str = min(quant_str, (1-quant_str))*2) %>%
+  mutate(sampling_frequency = spd/50) %>%
+  pivot_longer(cols = c(p2_deg, p2_str), names_to = "measure", values_to = "pval") %>%
+  mutate(measure = fct_recode(factor(measure), 
+                              "Degree" = "p2_deg",
+                              "Strength" = "p2_str")) %>%
+  mutate(shiftprop = (shift*2)/50)
 
-fp_long <- fp %>%
-  pivot_longer(cols = c(deg_fp_rate, str_fp_rate), names_to = "measure", values_to = "fp_rate") %>%
-  mutate(measure = case_when(measure == "deg_fp_rate" ~ "Degree",
-                             measure == "str_fp_rate" ~ "Strength")) %>%
-  mutate(scenario = substr(uniquesim, 1, 1))
+ns_deg <- pvals %>% filter(grepl("ns", uniquesim), measure == "Degree")
+ns_str <- pvals %>% filter(grepl("ns", uniquesim), measure == "Strength")
+ns <- pvals %>% filter(grepl("ns", uniquesim))
 
-fp_ns_lm <- fp_long %>%
-  filter(!is.na(shiftprop)) %>%
-  ggplot(aes(x = sampling_frequency, y = fp_rate, col = shiftprop))+
-  scale_color_gradientn(name = "Shift proportion", colors = continuousColors)+
-  #geom_point()+
-  geom_smooth(method = "lm", se = F, aes(group = factor(shiftprop)), linewidth = 1.5)+
-  facet_rep_grid(rows = vars(scenario), cols = vars(measure), scales = "free_y")+
-  theme_bw()+
-  ylab("False positive rate")+
-  theme(legend.position = "bottom")+
-  xlab("Sampling frequency")+
-  #geom_point(data = fp_long %>% filter(is.na(shiftprop)), aes(x = sampling_frequency, y = fp_rate), col = permutationColors[2], linewidth = 1.5)+
-  geom_smooth(method = "lm", se = F, data = fp_long %>% filter(is.na(shiftprop)), aes(x = sampling_frequency, y = fp_rate), col = permutationColors[2], linewidth = 1.5)+
-  #geom_point()+
-  theme(strip.text.y = element_blank(),
-        strip.background.y = element_blank(),
-        axis.title = element_text(size = 14),
-        axis.text = element_text(size = 10),
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 12),
-        strip.text.x = element_text(size = 12),
-        axis.line = element_line(),
-        panel.border = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background.x = element_blank())
-ggsave(fp_ns_lm, file = "fig/sims_plots/fp_ns_lm.png", width = 6, height = 8)
-
-fp_ns_path <- fp_long %>%
-  filter(!is.na(shiftprop)) %>%
-  ggplot(aes(x = sampling_frequency, y = fp_rate, col = shiftprop))+
+pvals_path <- ns %>%
+  filter(!is.na(shift)) %>% # first, plotting only conveyor
+  ggplot(aes(x = sampling_frequency, y = 1-pval, col = shiftprop, group = factor(shiftprop)))+
   scale_color_gradientn(name = "Shift proportion", colors = continuousColors)+
   #geom_point()+
   geom_path(aes(group = factor(shiftprop)), linewidth = 1.5)+
-  facet_rep_grid(rows = vars(scenario), cols = vars(measure), scales = "free_y")+
-  theme_bw()+
-  ylab("False positive rate")+
-  theme(legend.position = "bottom")+
-  xlab("Sampling frequency")+
-  #geom_point(data = fp_long %>% filter(is.na(shiftprop)), aes(x = sampling_frequency, y = fp_rate), col = permutationColors[2], linewidth = 1.5)+
-  geom_path(data = fp_long %>% filter(is.na(shiftprop)), aes(x = sampling_frequency, y = fp_rate), col = permutationColors[2], linewidth = 1.5)+
-  #geom_point()+
+  facet_rep_grid(rows = vars(uniquesim), cols = vars(measure), scales = "free_y")+
+  geom_hline(aes(yintercept = 0.95), col = "black", linetype = 2)+
+  geom_hline(aes(yintercept = 0.99), col = "black", linetype = 3)+
+  theme_minimal()+
+  geom_path(data = ns %>% filter(is.na(shift)), aes(x = sampling_frequency, y = 1-pval), col = permutationColors[2], linewidth = 1.5)+
   theme(strip.text.y = element_blank(),
         strip.background.y = element_blank(),
         axis.title = element_text(size = 14),
         axis.text = element_text(size = 10),
-        legend.text = element_text(size = 12),
         legend.title = element_text(size = 12),
         strip.text.x = element_text(size = 12),
         axis.line = element_line(),
         panel.border = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        strip.background.x = element_blank())
-ggsave(fp_ns_path, file = "fig/sims_plots/fp_ns_path.png", width = 6, height = 8)
+        strip.background.x = element_blank(),
+        legend.position = "bottom")+
+  ylab("Likelihood to detect a social effect")+
+  xlab("Sampling frequency")
+pvals_path
+ggsave(pvals_path, filename = "fig/sims_plots/pvals_path_ns.png", width = 6, height = 8)
+
+
+pvals_lm <- ns %>%
+  filter(!is.na(shift)) %>% # first, plotting only conveyor
+  ggplot(aes(x = sampling_frequency, y = 1-pval, col = shiftprop, group = factor(shiftprop)))+
+  scale_color_gradientn(name = "Shift proportion", colors = continuousColors)+
+  #geom_point()+
+  geom_smooth(method = "lm", se = F, aes(group = factor(shiftprop)), linewidth = 1.5)+
+  facet_rep_grid(rows = vars(uniquesim), cols = vars(measure), scales = "free_y")+
+  geom_hline(aes(yintercept = 0.95), col = "black", linetype = 2)+
+  geom_hline(aes(yintercept = 0.91), col = "black", linetype = 3)+
+  theme_minimal()+
+  geom_smooth(method = "lm", se = F, data = ns %>% filter(is.na(shift)), aes(x = sampling_frequency, y = 1-pval), col = permutationColors[2], linewidth = 1.5)+
+  theme(strip.text.y = element_blank(),
+        strip.background.y = element_blank(),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 12),
+        strip.text.x = element_text(size = 12),
+        axis.line = element_line(),
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background.x = element_blank(),
+        legend.position = "bottom")+
+  ylab("Likelihood to detect a social effect")+
+  xlab("Sampling frequency")
+pvals_lm
+ggsave(pvals_lm, filename = "fig/sims_plots/pvals_lm_ns.png", width = 6, height = 8)
+
+
