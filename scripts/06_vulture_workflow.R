@@ -27,6 +27,21 @@ head(season_data)
 # save(flightmetrics_summer2022, file = "data/vulture_permutations/flightmetrics_summer2022.Rda")
 load("data/vulture_permutations/flightmetrics_summer2022.Rda")
 
+# Validate
+fm <- flightmetrics_summer2022
+fm <- fm %>%
+  mutate(across(c("dmd", "dd", "ddt"), ~.x/1000))
+
+# Look at the histogram of daily distance traveled for each individual
+fm %>%
+  ggplot(aes(x = ddt, group = Nili_id))+
+  geom_density(alpha = 0.5)+
+  theme_classic()+
+  theme(legend.position = "none")+
+  xlab("daily distance traveled (flight)")
+
+fm %>% group_by(Nili_id) %>% summarize(mn = mean(ddt)) %>% ungroup() %>% arrange(mn)
+
 flightmetrics_summer2022 %>%
   ungroup() %>%
   summarize(mn_ddt = mean(ddt),
