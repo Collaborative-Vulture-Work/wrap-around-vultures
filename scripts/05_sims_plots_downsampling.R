@@ -244,6 +244,84 @@ head(stats_perm_downsampled)
 stats_perm_downsampled <- stats_perm_downsampled %>%
   mutate(uniquesim = paste(sim, sns, sep = "_"))
 
+# Make some plots so we can see what happens to the false positive rate
+stats_perm_downsampled %>%
+  filter(type == "conveyor", grepl("ns", uniquesim)) %>%
+  group_by(uniquesim, shift, spd) %>%
+  mutate(mn = mean(degree)) %>%
+  ggplot(aes(x = degree, col = shift, group = shift))+
+  geom_density()+
+  geom_vline(aes(xintercept = mn, col = shift, group = shift))+
+  facet_grid(rows = vars(spd), cols = vars(uniquesim), scales = "free_x")+
+  theme_minimal()+
+  geom_vline(data = stats_obs_downsampled %>%
+               filter(sns == "ns") %>%
+               group_by(uniquesim, spd) %>%
+               summarize(mn = mean(degree)),
+             aes(xintercept = mn), linetype = 2, col = "red")
+
+stats_perm_downsampled %>%
+  filter(type == "conveyor", grepl("ns", uniquesim)) %>%
+  group_by(uniquesim, shift, spd) %>%
+  mutate(mn = mean(strength)) %>%
+  ggplot(aes(x = strength, col = shift, group = shift))+
+  geom_density()+
+  geom_vline(aes(xintercept = mn, col = shift, group = shift))+
+  facet_grid(rows = vars(spd), cols = vars(uniquesim), scales = "free_x")+
+  theme_minimal()+
+  geom_vline(data = stats_obs_downsampled %>%
+               filter(sns == "ns") %>%
+               group_by(uniquesim, spd) %>%
+               summarize(mn = mean(strength)),
+             aes(xintercept = mn), linetype = 2, col = "red")
+
+# Okay this might show it, but what about the difference...
+stats_perm_downsampled %>%
+  filter(type == "conveyor", grepl("ns", uniquesim)) %>%
+  group_by(uniquesim, shift, spd) %>%
+  summarize(mn = mean(degree)) %>%
+  ggplot(aes(x = spd, y = mn, col = shift))+
+  geom_point()+
+  geom_line(aes(group = shift))+
+  facet_wrap(~uniquesim, ncol = 1, scales = "free_y")+
+  theme_minimal()+
+  ylab("Mean degree")+
+  xlab("Points per day")+
+  geom_point(data = stats_obs_downsampled %>%
+               filter(sns == "ns") %>%
+               group_by(uniquesim, spd) %>%
+               summarize(mn = mean(degree)),
+             aes(x = spd, y = mn), col = "red")+
+  geom_line(data = stats_obs_downsampled %>%
+              filter(sns == "ns") %>%
+              group_by(uniquesim, spd) %>%
+              summarize(mn = mean(degree)),
+            aes(x = spd, y = mn), col = "red", linetype = 2)
+
+stats_perm_downsampled %>%
+  filter(type == "conveyor", grepl("ns", uniquesim)) %>%
+  group_by(uniquesim, shift, spd) %>%
+  summarize(mn = mean(strength)) %>%
+  ggplot(aes(x = spd, y = mn, col = shift))+
+  geom_point()+
+  geom_line(aes(group = shift))+
+  facet_wrap(~uniquesim, ncol = 1, scales = "free_y")+
+  theme_minimal()+
+  ylab("Mean strength")+
+  xlab("Points per day")+
+  geom_point(data = stats_obs_downsampled %>%
+               filter(sns == "ns") %>%
+               group_by(uniquesim, spd) %>%
+               summarize(mn = mean(strength)),
+             aes(x = spd, y = mn), col = "red")+
+  geom_line(data = stats_obs_downsampled %>%
+              filter(sns == "ns") %>%
+              group_by(uniquesim, spd) %>%
+              summarize(mn = mean(strength)),
+            aes(x = spd, y = mn), col = "red", linetype = 2)
+
+########
+
 perm_means <- stats_perm_downsampled %>%
   group_by(uniquesim, spd, shift, type, iteration) %>%
   summarize(mndeg = mean(degree, na.rm = T),
@@ -288,8 +366,7 @@ pvals_path <- ns %>%
   #geom_point()+
   geom_path(aes(group = factor(shiftprop)), linewidth = 1.5)+
   facet_rep_grid(rows = vars(uniquesim), cols = vars(measure), scales = "free_y")+
-  geom_hline(aes(yintercept = 0.95), col = "black", linetype = 2)+
-  geom_hline(aes(yintercept = 0.99), col = "black", linetype = 3)+
+  geom_hline(aes(yintercept = 0.95), col = "gray", lwd = 0.7)+
   theme_minimal()+
   geom_path(data = ns %>% filter(is.na(shift)), aes(x = sampling_frequency, y = 1-pval), col = permutationColors[2], linewidth = 1.5)+
   theme(strip.text.y = element_blank(),
@@ -317,8 +394,7 @@ pvals_lm <- ns %>%
   #geom_point()+
   geom_smooth(method = "lm", se = F, aes(group = factor(shiftprop)), linewidth = 1.5)+
   facet_rep_grid(rows = vars(uniquesim), cols = vars(measure), scales = "free_y")+
-  geom_hline(aes(yintercept = 0.95), col = "black", linetype = 2)+
-  geom_hline(aes(yintercept = 0.91), col = "black", linetype = 3)+
+  geom_hline(aes(yintercept = 0.95), col = "gray", lwd = 0.7)+
   theme_minimal()+
   geom_smooth(method = "lm", se = F, data = ns %>% filter(is.na(shift)), aes(x = sampling_frequency, y = 1-pval), col = permutationColors[2], linewidth = 1.5)+
   theme(strip.text.y = element_blank(),
