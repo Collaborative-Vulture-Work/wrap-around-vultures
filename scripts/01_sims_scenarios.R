@@ -51,7 +51,7 @@ p_s1_ns <- sim1_ns$XY %>%
   ggplot() +
   geom_path(data = sim1_ns$XY %>% filter(!indiv %in% indivs), 
             aes(x=  X, y = Y, group = indiv), 
-            col = "black", linewidth = 0.1, alpha = 0.1)+
+            col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv), 
             linewidth = 1, alpha = 0.9)+
   theme(legend.position = "none", axis.text = element_text(size = 18))+
@@ -120,7 +120,7 @@ p_s1_s <- sim1_s$XY %>%
   ggplot()+
   geom_path(data = sim1_s$XY %>% filter(!indiv %in% indivs), 
             aes(x=  X, y = Y, group = indiv), 
-            col = "black", linewidth = 0.1, alpha = 0.1)+
+            col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv),
             linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", axis.text = element_text(size = 18))+
@@ -174,7 +174,7 @@ p_s2_ns <- sim2_ns$XY %>%
   ggplot()+
   geom_path(data = sim2_ns$XY %>% filter(!indiv %in% indivs), 
             aes(x=  X, y = Y, group = indiv), 
-            col = "black", linewidth = 0.1, alpha = 0.1)+
+            col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv),
             linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", axis.text = element_text(size = 18))+
@@ -241,7 +241,7 @@ p_s2_s <- sim2_s$XY %>%
   ggplot()+
   geom_path(data = sim2_s$XY %>% filter(!indiv %in% indivs), 
             aes(x=  X, y = Y, group = indiv), 
-            col = "black", linewidth = 0.1, alpha = 0.1)+
+            col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv),
             linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", axis.text = element_text(size = 18))+
@@ -294,7 +294,7 @@ p_s3_ns <- sim3_ns$XY %>%
   ggplot()+
   geom_path(data = sim3_ns$XY %>% filter(!indiv %in% indivs), 
             aes(x=  X, y = Y, group = indiv), 
-            col = "black", linewidth = 0.1, alpha = 0.1)+
+            col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv),
             linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", axis.text = element_text(size = 18))+
@@ -360,7 +360,7 @@ p_s3_s <- sim3_s$XY %>%
   ggplot()+
   geom_path(data = sim3_s$XY %>% filter(!indiv %in% indivs), 
             aes(x=  X, y = Y, group = indiv), 
-            col = "black", linewidth = 0.1, alpha = 0.1)+
+            col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv),
             linewidth = 1, alpha = 0.9) +
   theme(legend.position = "none", axis.text = element_text(size = 18))+
