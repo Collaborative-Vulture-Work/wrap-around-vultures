@@ -9,7 +9,6 @@ library(vultureUtils)
 # save(season_data, file = "data/vulture_permutations/season_data.Rda")
 load("data/vulture_permutations/season_data.Rda")
 roostPolygons <- read_sf("./data/roosts50_kde95_cutOffRegion.kml")
-rm(seasons)
 
 # Make date and time columns that can be used for rotations
 season_data$date <- lubridate::date(season_data$timestamp)
@@ -81,11 +80,60 @@ vultures <- forplot %>%
   theme_minimal()+
   scale_color_manual(values = as.character(tencolors))+
   theme(legend.position = "none")+
-  geom_path(data = forplot %>% filter(!toshow), alpha = 0.1, linewidth = 0.1, col = "black")+
+  geom_path(data = forplot %>% filter(!toshow), alpha = 0.2, linewidth = 0.2, col = "black")+
   theme(axis.title = element_blank())+
   NULL
 
 ggsave(vultures, filename = "fig/vulture_permutations_plots/vultures.png", width = 7, height = 7)
+
+# Look at the vultures' home ranges and space use ---------------------------------------
+szn <- season_data %>%
+  sf::st_as_sf(coords = c("location_long", "location_lat"), crs = "WGS84") %>%
+  sf::st_transform(32636)
+
+szn <- cbind(szn, st_coordinates(szn))
+
+# get the daily centroid for each individual vulture
+centroids <- szn %>%
+  group_by(trackId, date) %>%
+  summarize(geometry = st_union(geometry)) %>%
+  st_centroid()
+
+centroids <- cbind(centroids, st_coordinates(centroids))
+
+centroids %>% 
+  arrange(trackId, date) %>%
+  filter(trackId %in% unique(centroids$trackId)[1:6], date %in% unique(centroids$date)[1:20]) %>% 
+  ggplot(aes(x = X, y = Y, col = date, group = trackId))+
+  geom_point(size = 2)+
+  geom_path()+
+  theme_minimal()+
+  geom_point(data = szn %>% filter(trackId %in% unique(centroids$trackId)[1:6], date %in% unique(centroids$date)[1:20]), aes(x = X, y = Y, col = date, group = trackId), size = 0.5)+
+  geom_path(data = szn %>%
+              filter(trackId %in% unique(centroids$trackId)[1:6], date %in% unique(centroids$date)[1:20]),
+            aes(x = X, y = Y, col = date, group = trackId),
+            linewidth = 0.7, alpha = 0.7)+
+  facet_wrap(~trackId)+
+  scale_color_gradientn(colors = c("darkred", "red", "darkorange", "yellow", "green", "blue", "darkblue"))
+
+
+centroids %>% 
+  arrange(trackId, date) %>%
+  filter(trackId %in% unique(centroids$trackId)[1:6], date %in% unique(centroids$date)[1:20]) %>% 
+  ggplot(aes(x = X, y = Y, col = trackId, group = trackId))+
+  geom_point(size = 2)+
+  geom_path()+
+  theme_minimal()+
+  geom_point(data = szn %>% filter(trackId %in% unique(centroids$trackId)[1:6], date %in% unique(centroids$date)[1:20]), aes(x = X, y = Y, col = trackId, group = trackId), size = 0.5)+
+  geom_path(data = szn %>%
+              filter(trackId %in% unique(centroids$trackId)[1:6], date %in% unique(centroids$date)[1:20]),
+            aes(x = X, y = Y, col = trackId, group = trackId),
+            linewidth = 1, alpha = 0.7)
+
+# so, the vultures share a lot of space, but they also have relatively constant areas of use. Like a combination of scenarios 1 and 2. 
+# the key parameter that's different is the home range step size relative to the agent step size. It looks like they should be drawn from the same distribution. We used a factor of 10 and (essentially) 0, but it looks like we need a factor of 1.
+  
+
 
 # Do some permutations ----------------------------------------------------
 
@@ -93,12 +141,19 @@ n <- 100 # number of permutations
 length(unique(season_data$dateOnly)) #124 days
 # Let's do roughly 20% of that... so 24ish days. so sm should be 12.
 sm <- 12 # can shift 12 days in either direction, 24 day range total
+sm2 <- 1 # running it again with just 1 day allowed in either direction
 
 # Run the conveyor permutations
 realizations_conveyor_v <- vector(mode = "list", length = n)
 for(i in 1:n){
   cat(".")
-  realizations_conveyor_v[[i]] <- rotate_data_table(dataset = season_data, shiftMax = 5, idCol = "trackId", dateCol = "date", timeCol = "time")
+  realizations_conveyor_v[[i]] <- rotate_data_table(dataset = season_data, shiftMax = sm, idCol = "trackId", dateCol = "date", timeCol = "time")
+} 
+
+realizations_conveyor_v2 <- vector(mode = "list", length = n) # again with a smaller shift range
+for(i in 1:n){
+  cat(".")
+  realizations_conveyor_v2[[i]] <- rotate_data_table(dataset = season_data, shiftMax = sm2, idCol = "trackId", dateCol = "date", timeCol = "time")
 } 
 
 realizations_conveyor_v <- realizations_conveyor_v %>%
@@ -106,47 +161,88 @@ realizations_conveyor_v <- realizations_conveyor_v %>%
         rename(oldtimestamp = timestamp,
                timestamp = newdatetime))
 save(realizations_conveyor_v, file = "data/vulture_permutations/realizations_conveyor_v.Rda")
-#load("data/vulture_permutations/realizations_conveyor_v.Rda")
+
+realizations_conveyor_v2 <- realizations_conveyor_v2 %>%
+  map(., ~.x %>%
+        rename(oldtimestamp = timestamp,
+               timestamp = newdatetime))
+save(realizations_conveyor_v2, file = "data/vulture_permutations/realizations_conveyor_v2.Rda")
+
+# load("data/vulture_permutations/realizations_conveyor_v.Rda")
+# load("data/vulture_permutations/realizations_conveyor_v2.Rda")
 
 # Run the random permutations
-random_data <- season_data
-data.table::setDT(random_data)
-toJoin <- random_data %>%
-  select(ground_speed, location_lat, location_long, date, time)
-realizations_random_v <- as.data.frame(randomizations(DT = random_data, type = "trajectory", id = "trackId", datetime = "timestamp", coords = c("location_lat.1", "location_long.1"), iterations = n)) %>%
-  rename(oldtimestamp = timestamp,
-         timestamp = randomtimestamp) %>%
-  filter(iteration != 0) %>% group_split(iteration, .keep = TRUE) %>%
-  map(., ~bind_cols(.x, toJoin))
-realizations_random_v <- map(realizations_random_v, ~.x %>% mutate(dateOnly = lubridate::date(timestamp)))
-save(realizations_random_v, file = "data/vulture_permutations/realizations_random_v.Rda")
-#load("data/vulture_permutations/realizations_random_v.Rda")
+# random_data <- season_data
+# data.table::setDT(random_data)
+# toJoin <- random_data %>%
+#   select(ground_speed, location_lat, location_long, date, time)
+# realizations_random_v <- as.data.frame(randomizations(DT = random_data, type = "trajectory", id = "trackId", datetime = "timestamp", coords = c("location_lat.1", "location_long.1"), iterations = n)) %>%
+#   rename(oldtimestamp = timestamp,
+#          timestamp = randomtimestamp) %>%
+#   filter(iteration != 0) %>% group_split(iteration, .keep = TRUE) %>%
+#   map(., ~bind_cols(.x, toJoin))
+# realizations_random_v <- map(realizations_random_v, ~.x %>% mutate(dateOnly = lubridate::date(timestamp)))
+# save(realizations_random_v, file = "data/vulture_permutations/realizations_random_v.Rda")
+load("data/vulture_permutations/realizations_random_v.Rda")
 
 
 # Transform both to sf
 conveyor_v_sf <- map(realizations_conveyor_v, ~.x %>% st_as_sf(., coords = c("location_long.1", "location_lat.1"), crs = "WGS84"))
+rm(realizations_conveyor_v)
+gc()
+conveyor_v2_sf <- map(realizations_conveyor_v2, ~.x %>% st_as_sf(., coords = c("location_long.1", "location_lat.1"), crs = "WGS84"))
+rm(realizations_conveyor_v2)
+gc()
 random_v_sf <- map(realizations_random_v, ~.x %>% st_as_sf(., coords = c("location_long", "location_lat"), crs = "WGS84", remove = F))
+rm(realizations_random_v)
+gc()
 
 fe_conveyor <- map(conveyor_v_sf, ~{
   getFlightEdges(dataset = .x, roostPolygons = roostPolygons, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
 })
 save(fe_conveyor, file = "data/vulture_permutations/fe_conveyor.Rda")
-load("data/vulture_permutations/fe_conveyor.Rda")
+rm(conveyor_v_sf)
+#load("data/vulture_permutations/fe_conveyor.Rda")
+
+fe_conveyor_2 <- map(conveyor_v2_sf, ~{
+  getFlightEdges(dataset = .x, roostPolygons = roostPolygons, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
+})
+save(fe_conveyor_2, file = "data/vulture_permutations/fe_conveyor_2.Rda")
+rm(conveyor_v2_sf)
+#load("data/vulture_permutations/fe_conveyor_2.Rda")
 
 fe_random <- map(random_v_sf, ~{
   getFlightEdges(dataset = .x, roostPolygons = roostPolygons, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
 })
 save(fe_random, file = "data/vulture_permutations/fe_random.Rda")
-load("data/vulture_permutations/fe_random.Rda")
+rm(random_v_sf)
+#load("data/vulture_permutations/fe_random.Rda")
+
+# Something weird happened here where some of the data frames returned have 6 variables instead of 3 and seem to be edge lists instead of SRI. I think all of those have 0 rows, though...
+map_dbl(fe_conveyor, ncol)
+fe_conveyor[map_dbl(fe_conveyor, ncol) > 3] # yeah, these all have 0 rows
 
 # Calculate the stats
 # we defined n above--number of permutations
-fe_conveyor_df <- map2(.x = fe_conveyor, .y = 1:n, ~{filter(.x, sri > 0) %>% mutate(iteration = .y)}) %>% discard(~nrow(.x) == 0) %>% purrr::list_rbind()
+fe_conveyor_df <- purrr::map2(.x = fe_conveyor, .y = 1:n, ~{.x %>% mutate(iteration = .y)}) %>% discard(~nrow(.x) == 0) %>% purrr::list_rbind() %>%
+  filter(sri > 0) # that makes more sense...
 flipped_c <- fe_conveyor_df
 names(flipped_c)[1:2] <- c("ID2", "ID1") # flip the order to make sure we're able to group just by ID1
 bound_c <- bind_rows(fe_conveyor_df, flipped_c)
 
 stats_conveyor <- bound_c %>%
+  group_by(iteration, ID1) %>%
+  summarize(deg = length(unique(ID2)),
+            n = n(),
+            str = sum(sri))
+
+fe_conveyor_df_2 <- purrr::map2(.x = fe_conveyor_2, .y = 1:n, ~{.x %>% mutate(iteration = .y)}) %>% discard(~nrow(.x) == 0) %>% purrr::list_rbind() %>%
+  filter(sri > 0) # that makes more sense...
+flipped_c2 <- fe_conveyor_df_2
+names(flipped_c2)[1:2] <- c("ID2", "ID1") # flip the order to make sure we're able to group just by ID1
+bound_c2 <- bind_rows(fe_conveyor_df_2, flipped_c2)
+
+stats_conveyor2 <- bound_c2 %>%
   group_by(iteration, ID1) %>%
   summarize(deg = length(unique(ID2)),
             n = n(),
@@ -168,8 +264,15 @@ vulture_stats_perms <- stats_conveyor %>%
   bind_rows(stats_random %>%
               mutate(type = "random"))
 
+vulture_stats_perms_2 <- stats_conveyor2 %>%
+  mutate(type = "conveyor") %>%
+  bind_rows(stats_random %>%
+              mutate(type = "random"))
+
 save(vulture_stats_perms, file = "data/vulture_permutations/vulture_stats_perms.Rda")
+save(vulture_stats_perms_2, file = "data/vulture_permutations/vulture_stats_perms_2.Rda")
 load("data/vulture_permutations/vulture_stats_perms.Rda")
+load("data/vulture_permutations/vulture_stats_perms_2.Rda")
 
 # Get observed stats
 season_data <- season_data %>%
