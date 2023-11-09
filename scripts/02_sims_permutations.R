@@ -77,13 +77,14 @@ sims_random <- map(sims_xy_dt, ~{
 save(sims_random, file = "data/simulations/sims_random.Rda")
 load("data/simulations/sims_random.Rda")
 
-
 # STATS -------------------------------------------------------------------
 # 1. observed simulations
 obs_stats <- map(sims_xy,
                  ~get_stats(data = .x,
                             edgelist = get_edgelist(.x, idCol = "indiv",
-                                                    dateCol = "datetime")))
+                                                    dateCol = "datetime"),
+                            idCol = "indiv"), 
+                 .progress = T)
 # Label the stats
 obs_stats <- map2(obs_stats, simulations, ~.x %>% mutate(sim = .y))
 obs_stats <- map2(obs_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
@@ -100,9 +101,9 @@ stats_shifts <- map(sms_sims_conveyor, ~{
     stats_iterations <- map(iterations, ~{
       data <- .x
       edges <- get_edgelist(data = data, idCol = "indiv", dateCol = "newdatetime")
-      stats <- get_stats(edgelist = edges, data = data)
+      stats <- get_stats(edgelist = edges, data = data, idCol = "indiv")
       return(stats)
-    }) %>% purrr::list_rbind(names_to = "iteration")
+    }, .progress = T) %>% purrr::list_rbind(names_to = "iteration")
   }) %>% purrr::list_rbind(names_to = "simulation")
 }) %>% purrr::list_rbind(names_to = "shift")
 
@@ -123,7 +124,7 @@ load("data/simulations/sms_conveyor_stats_df.Rda")
 random_stats <- vector(mode = "list", length = length(sims_random))
 for(i in 1:length(sims_random)){
   edges <- map(sims_random[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
-  stats <- map2(.x = sims_random[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
+  stats <- map2(.x = sims_random[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x, idCol = "indiv")) %>%
     purrr::list_rbind(names_to = "iteration")
   random_stats[[i]] <- stats
 }
