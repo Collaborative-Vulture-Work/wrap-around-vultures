@@ -135,10 +135,10 @@ load("data/simulations/random_5spd.Rda")
 
 # STATS -------------------------------------------------------------------
 # 1. observed simulations
-obs_stats_50spd <- map(sims_xy, ~get_stats(data = .x, edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime")))
-obs_stats_25spd <- map(sims_xy_25spd, ~get_stats(data = .x, edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime")))
-obs_stats_10spd <- map(sims_xy_10spd, ~get_stats(data = .x, edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime")))
-obs_stats_5spd <- map(sims_xy_5spd, ~get_stats(data = .x, edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime")))
+obs_stats_50spd <- map(sims_xy, ~get_stats(data = as.data.frame(.x), edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime"), idCol = "indiv"), .progress = T)
+obs_stats_25spd <- map(sims_xy_25spd, ~get_stats(data = as.data.frame(.x), edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime"), idCol = "indiv"), .progress = T)
+obs_stats_10spd <- map(sims_xy_10spd, ~get_stats(data = as.data.frame(.x), edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime"), idCol = "indiv"), .progress = T)
+obs_stats_5spd <- map(sims_xy_5spd, ~get_stats(data = as.data.frame(.x), edgelist = get_edgelist(.x, idCol = "indiv", dateCol = "datetime"), idCol = "indiv"), .progress = T)
 
 label <- function(stats){
   out <- map2(stats, simulations, ~.x %>% mutate(sim = .y))
@@ -176,9 +176,9 @@ statsconveyor <- function(conveyorlist){
       stats_iterations <- map(iterations, ~{
         data <- .x
         edges <- get_edgelist(data = data, idCol = "indiv", dateCol = "newdatetime")
-        stats <- get_stats(edgelist = edges, data = data)
+        stats <- get_stats(edgelist = edges, data = data, idCol = "indiv")
         return(stats)
-      }) %>% purrr::list_rbind(names_to = "iteration")
+      }, .progress = T) %>% purrr::list_rbind(names_to = "iteration")
     }) %>% purrr::list_rbind(names_to = "simulation")
   }) %>% purrr::list_rbind(names_to = "shift") %>%
     mutate(shift = sms[as.character(shift)],
@@ -207,7 +207,7 @@ statsrandom <- function(randomlist){
   out <- vector(mode = "list", length = length(randomlist))
   for(i in 1:length(randomlist)){
     edges <- map(randomlist[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
-    stats <- map2(.x = randomlist[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x)) %>%
+    stats <- map2(.x = randomlist[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x, idCol = "indiv")) %>%
       purrr::list_rbind(names_to = "iteration")
     out[[i]] <- stats
   }
