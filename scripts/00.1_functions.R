@@ -306,24 +306,28 @@ rotate_data_table <- function(dataset, shiftMax, idCol = "indiv", dateCol = "dat
 
 # 5. get_stats ------------------------------------------------------------
 # get degree, mean sri, and strength per individual
-get_stats <- function(edgelist, data){
-  associations <- edgelist %>%
-    dplyr::count(ID1) %>%
-    dplyr::rename("associations" = "n") # count number of edges per indiv
+get_stats <- function(edgelist, data, idCol){
+  indivs <- unique(data[[idCol]])
   
   degree <- edgelist %>%
     dplyr::group_by(ID1) %>%
     dplyr::summarise(degree = n_distinct(ID2), .groups = "drop") # count distinct edges
+  if(length(indivs[!(indivs %in% degree$ID1)]) > 0){
+    toadd_d <- data.frame(ID1 = indivs[!(indivs %in% degree$ID1)], degree = 0)
+    degree <- bind_rows(degree, toadd_d)
+  }
   
   sri_per_edge <- calcSRI(dataset = data, edges = edgelist, idCol = "indiv", timegroupCol = "timegroup") # calculate SRI
   
-  mean_sri_and_strength <- sri_per_edge %>% # get mean sri and strength
+  strength <- sri_per_edge %>% # get mean sri and strength
     dplyr::group_by(ID1) %>%
-    dplyr::summarise(mean_sri = mean(sri),
-                     strength = sum(sri, na.rm = T), .groups = "drop")
+    dplyr::summarise(strength = sum(sri, na.rm = T), .groups = "drop")
+  if(length(indivs[!(indivs %in% strength$ID1)]) > 0){
+    toadd_s <- data.frame(ID1 = indivs[!(indivs %in% strength$ID1)], strength = 0)
+    strength <- bind_rows(strength, toadd_s)
+  }
   
-  stats <- dplyr::inner_join(associations, degree, by = dplyr::join_by(ID1)) %>%
-    dplyr::inner_join(., mean_sri_and_strength, by=dplyr::join_by(ID1))
+  stats <- dplyr::inner_join(degree, strength, by=dplyr::join_by(ID1))
   return(stats)
 }
 
