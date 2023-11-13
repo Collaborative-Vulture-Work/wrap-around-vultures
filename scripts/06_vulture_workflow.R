@@ -57,33 +57,30 @@ flightmetrics_summer2022 %>%
 # Make a plot of the vulture trajectories
 vultures <- unique(season_data$Nili_id)
 set.seed(3)
-random_vultures <- sample(vultures, 3)
+random_vultures <- sample(vultures, 5)
 mindate <- min(season_data$dateOnly)
 maxdate <- mindate + 50
 
 forplot <- season_data %>%
+  sf::st_as_sf(coords = c("location_long", "location_lat"), crs = "WGS84", remove = F) %>%
   filter(dateOnly >= mindate, dateOnly <= maxdate) %>%
   dplyr::mutate(toshow = dplyr::case_when(Nili_id %in% random_vultures ~ T,
                             TRUE ~F)) %>%
-  sf::st_transform(32636) %>%
+  #sf::st_transform(32636) %>%
   mutate(x = sf::st_coordinates(.)[,1],
          y = sf::st_coordinates(.)[,2]) %>%
   sf::st_drop_geometry() %>%
   dplyr::select(Nili_id, toshow, timestamp, x, y) %>%
   dplyr::arrange(Nili_id, timestamp)
 
-vultures <- forplot %>%
-  filter(toshow) %>%
-  #filter(y < 3450000, y > 3400000, x > 650000, x < 730000) %>%
-  ggplot(aes(x, y, col = Nili_id))+
-  geom_path(linewidth = 1.5, alpha = 0.9)+
+vultures <- ggplot(data = forplot %>% filter(toshow), aes(x, y, col = Nili_id))+
+  geom_path(data = forplot %>% filter(!toshow), alpha = 0.3, linewidth = 0.3, col = "black")+
+  geom_path(linewidth = 1.5, alpha = 0.8)+
   theme_minimal()+
-  scale_color_manual(values = as.character(tencolors))+
-  theme(legend.position = "none")+
-  geom_path(data = forplot %>% filter(!toshow), alpha = 0.2, linewidth = 0.2, col = "black")+
-  theme(axis.title = element_blank())+
-  NULL
-
+  theme(legend.position = "none",
+        axis.title = element_blank())+
+  coord_equal()
+vultures
 ggsave(vultures, filename = "fig/vulture_permutations_plots/vultures.png", width = 7, height = 7)
 
 # Look at the vultures' home ranges and space use ---------------------------------------
