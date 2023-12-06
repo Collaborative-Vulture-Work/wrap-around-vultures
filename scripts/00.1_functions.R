@@ -48,7 +48,10 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            HRStpStd = 0.01,  # STD of step lengths of HRs
                            socialWeight = 0, # how much to bias toward another individual, versus toward the home range point. Default is biasing toward the mean between the home range center and the other individual's location. If socialWeight is 1, will bias just toward the other individual. If socialWeight is 0, will not bias toward the other individual.
                            sameStartingAngle = 0,
-                           asocial = F
+                           asocial = F,
+                           spatialAttractors = NULL,
+                           spatialPercepRange = 200,
+                           spatialWeight = 0.5
 ){
   
   # 1. Set the seed, if one is provided ----------------------------------------
@@ -141,6 +144,15 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       }
       Dist[Dist == 0] <- NA # Remove distance to self
       
+      
+      if(class(spatialAttractors) == "data.frame"){
+        distToAttractors <- rep(NA, nrow(spatialAttractors))
+        for(spatialAttractor in 1:nrow(spatialAttractors)){
+          distToAttractors[spatialAttractor] <- stats::dist(rbind(spatialAttractors[spatialAttractor, ],
+                                                c(XYind[[Curr_indv]][Curr_timestep,])))
+        }
+      }
+      
       # Calculating the direction to the initial location (bias point )+ now with drift for the current step
       # Set individual bias points in different ways depending on method
       if(HRChangeRadius > 0 || sim_3 > 0){
@@ -169,6 +181,15 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           BiasPoint <- meanpoint
         }
       }
+      
+      if(class(spatialAttractors) == "data.frame"){
+        if(min(distToAttractors, na.rm = T) < spatialPercepRange){
+          closestAttractor <- as.numeric(spatialAttractors[which.min(distToAttractors), ])
+          meanpoint <- (spatialWeight*closestAttractor + (1-spatialWeight) * BiasPoint)
+          BiasPoint <- meanpoint
+        }
+      }
+      
       
       # Set direction to the chosen bias point
       coo <- BiasPoint - XYind[[Curr_indv]][Curr_timestep, ] 

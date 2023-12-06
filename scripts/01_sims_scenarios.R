@@ -402,5 +402,63 @@ ggsave(trajectories_patchwork, filename = "fig/trajectories/trajectories_patchwo
 # Daily displacement distances for each simulation ------------------------
 # Trajectory-long displacements -------------------------------------------
 
+Scl <- 1000
 
+staticAttractors <- data.frame()
+for(i in 1:4){
+  for(j in 1:4){
+    # runif(n=1, min=-Scl/2, max=Scl/2 )
+    x <- i * Scl/4 - 2 * Scl/4
+    y <- j * Scl/4 - 2 * Scl/4
+    staticAttractors <- rbind(staticAttractors, c(x, y))
+  }
+}
+colnames(staticAttractors) <- c("x", "y")
+
+sim1_ns <- simulateAgents(N = 5,
+                       Days = 10,
+                       DayLength = 50,
+                       Soc_Percep_Rng = 1000,
+                       Scl = Scl,
+                       seed = 9252023,
+                       EtaCRW = 0.7,
+                       StpSize_ind = 7,
+                       StpStd_ind = 5,
+                       Kappa_ind = 4,
+                       quiet = T,
+                       sim_3 = F,
+                       socialWeight = 0,
+                       HREtaCRW = 0.7,
+                       HRStpSize = HRStpSize,
+                       HRStpStd = HRStpStd,
+                       HRKappa_ind = hrk,
+                       spatialAttractors = staticAttractors,
+                       spatialWeight = 1,
+                       spatialPercepRange = Scl/5)
+
+hr <- sim1_ns$HRCent %>% as.data.frame() %>% mutate(indiv = 1:nrow(.)) %>% rename("X" = V1, "Y" = V2)
+
+ggplot() + 
+  geom_point(data = sim1_ns$XY, aes(x = X, y = Y, col = day))+
+  geom_point(data = hr, aes(x = X, y = Y), pch = 19, size = 5)+
+  geom_point(data = staticAttractors, aes(x = x, y = y)) + 
+  facet_wrap(~indiv, scales = "free")+theme_minimal()+
+  theme(legend.position = "none", axis.text = element_text(size = 18))+
+  scale_color_viridis()+
+  ggtitle("Scenario 1, non-sociable")
+
+indivs <- sample(unique(sim1_ns$XY$indiv), 5)
+p_s1_ns <- sim1_ns$XY %>% 
+  filter(indiv %in% indivs) %>%
+  ggplot() +
+  geom_path(data = sim1_ns$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.2)+
+  geom_path(aes(x = X, y = Y, col = indiv), 
+            linewidth = 1, alpha = 0.9)+
+  theme(legend.position = "none", axis.text = element_text(size = 18))+
+  scale_color_manual(values = as.character(tencolors))+
+  theme_minimal()+
+  theme(legend.position = "none")+
+  ggtitle("Scenario 1, non-sociable")
 
