@@ -426,7 +426,7 @@ sim1_ns <- simulateAgents(N = 5,
                        StpStd_ind = 5,
                        Kappa_ind = 4,
                        quiet = T,
-                       sim_3 = F,
+                       sim_3 = T,
                        socialWeight = 0,
                        HREtaCRW = 0.7,
                        HRStpSize = HRStpSize,
@@ -456,9 +456,56 @@ p_s1_ns <- sim1_ns$XY %>%
             col = "black", linewidth = 0.1, alpha = 0.2)+
   geom_path(aes(x = X, y = Y, col = indiv), 
             linewidth = 1, alpha = 0.9)+
+  geom_point(data = staticAttractors, aes(x = x, y = y)) + 
   theme(legend.position = "none", axis.text = element_text(size = 18))+
   scale_color_manual(values = as.character(tencolors))+
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 1, non-sociable")
 
+sim3_ns <- simulateAgents(N = 5,
+                          Days = 10,
+                          DayLength = 50,
+                          Soc_Percep_Rng = 1000,
+                          Scl = 1000,
+                          seed = 9252023,
+                          EtaCRW = 0.7,
+                          StpSize_ind = baseAgentStep,
+                          StpStd_ind = 5,
+                          Kappa_ind = 4,
+                          quiet = T,
+                          sim_3 = T,
+                          socialWeight = 0.75,
+                          HREtaCRW = 0.7,
+                          HRStpSize = HRStpSize,
+                          HRStpStd = HRStpStd,
+                          HRKappa_ind = hrk,
+                          spatialAttractors = staticAttractors,
+                          spatialWeight = 0.25,
+                          spatialPercepRange = Scl/5)
+
+ggplot() +
+  geom_point(data = sim3_ns$XY, aes(x = X, y = Y, col = day))+
+  geom_point(data = sim3_ns$HRCent, aes(x = X, y = Y, col = day),
+             pch = 19, size = 5)+
+  geom_point(data = staticAttractors, aes(x = x, y = y)) + 
+  facet_wrap(~indiv, scales = "free")+theme_minimal()+
+  theme(legend.position = "none", axis.text = element_text(size = 18))+
+  scale_color_viridis()+
+  ggtitle("Scenario 3, non-sociable")
+
+indivs <- sample(unique(sim3_ns$XY$indiv), 5)
+p_s3_ns <- sim3_ns$XY %>%
+  filter(indiv %in% indivs) %>%
+  ggplot()+
+  geom_path(data = sim3_ns$XY %>% filter(!indiv %in% indivs), 
+            aes(x=  X, y = Y, group = indiv), 
+            col = "black", linewidth = 0.1, alpha = 0.2)+
+  geom_path(aes(x = X, y = Y, col = indiv),
+            linewidth = 1, alpha = 0.9) +
+  geom_point(data = staticAttractors, aes(x = x, y = y)) + 
+  theme(legend.position = "none", axis.text = element_text(size = 18))+
+  scale_color_manual(values = as.character(tencolors))+
+  theme_minimal()+
+  theme(legend.position = "none")+
+  ggtitle("Scenario 3, non-sociable")
