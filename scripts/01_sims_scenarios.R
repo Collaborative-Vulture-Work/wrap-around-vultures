@@ -62,28 +62,6 @@ p_s1_ns <- sim1_ns$XY %>%
 #geom_point(data = hr, aes(x = X, y = Y), col = "black", size = 3)
 ggsave(p_s1_ns, file = "fig/trajectories/p_s1_ns.png", width = 6, height = 7)
 
-# sim1_socLevels <- map(socLevels, ~{
-#   sim <- simulateAgents(N = 30,
-#                            Days = 50,
-#                            DayLength = 50,
-#                            Soc_Percep_Rng = 1000,
-#                            Scl = 1000,
-#                            seed = 9252023,
-#                            EtaCRW = 0.7,
-#                            StpSize_ind = baseAgentStep,
-#                            StpStd_ind = 5,
-#                            Kappa_ind = 4,
-#                            quiet = T,
-#                            sim_3 = F,
-#                            socialWeight = .x,
-#                            HREtaCRW = 0.7,
-#                            HRStpSize = HRStpSize,
-#                            HRStpStd = HRStpStd,
-#                            HRKappa_ind = hrk)
-#   return(sim)
-# })
-# save(sim1_socLevels, file = "data/simulations/sim1_socLevels.Rda")
-
 # sim1_s <- simulateAgents(N = 30,
 #                           Days = 50,
 #                           DayLength = 50,
@@ -184,28 +162,6 @@ p_s2_ns <- sim2_ns$XY %>%
   ggtitle("Scenario 2, non-sociable")
 ggsave(p_s2_ns, file = "fig/trajectories/p_s2_ns.png", width = 6, height = 7)
 
-# sim2_socLevels <- map(socLevels, ~{
-#   sim <- simulateAgents(N = 30,
-#                  Days = 50,
-#                  DayLength = 50,
-#                  Soc_Percep_Rng = 1000,
-#                  Scl = 1000,
-#                  seed = 9252023,
-#                  EtaCRW = 0.7,
-#                  StpSize_ind = baseAgentStep,
-#                  StpStd_ind = 5,
-#                  Kappa_ind = 4,
-#                  quiet = T,
-#                  sim_3 = T,
-#                  socialWeight = .x,
-#                  HREtaCRW = 0.7,
-#                  HRStpSize = HRStpSize,
-#                  HRStpStd = HRStpStd,
-#                  HRKappa_ind = hrk)
-#   return(sim)
-# })
-# save(sim2_socLevels, file = "data/simulations/sim2_socLevels.Rda")
-
 # sim2_s <- simulateAgents(N = 30,
 #                           Days = 50,
 #                           DayLength = 50,
@@ -303,28 +259,6 @@ p_s3_ns <- sim3_ns$XY %>%
   theme(legend.position = "none")+
   ggtitle("Scenario 3, non-sociable")
 ggsave(p_s3_ns, file = "fig/trajectories/p_s3_ns.png", width = 7, height = 6)
-
-# sim3_socLevels <- map(socLevels, ~{
-#   sim3 <- simulateAgents(N = 30,
-#                            Days = 50,
-#                            DayLength = 50,
-#                            Soc_Percep_Rng = 1000,
-#                            Scl = 1000,
-#                            seed = 9252023,
-#                            EtaCRW = 0.7,
-#                            StpSize_ind = baseAgentStep,
-#                            StpStd_ind = 5,
-#                            Kappa_ind = 4,
-#                            quiet = T,
-#                            sim_3 = T,
-#                            socialWeight = .x,
-#                            HREtaCRW = 0.7,
-#                            HRStpSize = HRStpSize,
-#                            HRStpStd = HRStpStd,
-#                            HRKappa_ind = hrk)
-#   return(sim)
-# })
-# save(sim3_socLevels, file = "data/simulations/sim3_socLevels.Rda")
 
 # sim3_s <- simulateAgents(N = 30,
 #                          Days = 50,
