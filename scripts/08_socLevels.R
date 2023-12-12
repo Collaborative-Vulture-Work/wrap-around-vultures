@@ -137,7 +137,26 @@ for(i in 1:length(chunks)){
 
 save(conveyors, file = "data/simulations/conveyors.Rda")
 
-## Random ------------------------------------------------------------------
+conveyors_2 <- vector(mode = "list", length = length(chunks))
+for(i in 1:length(chunks)){
+  chunk <- chunks[[i]]
+  cat("simulation = ", chunk$simulation[1], "; socLevel = ", chunk$socLevel[1], "\n", sep = "")
+  realizations <- vector(mode = "list", length = n)
+  for(j in 1:n){
+    cat(".")
+    realizations[[j]] <- rotate_data_table(dataset = chunk,
+                                           shiftMax = 1,
+                                           idCol = "indiv",
+                                           dateCol = "date",
+                                           timeCol = "time")
+  }
+  cat("\n")
+  conveyors_2[[i]] <- realizations
+}
+
+save(conveyors_2, file = "data/simulations/conveyors_2.Rda")
+
+## Random permutations  --------------------------------------------------
 chunksdt <- map(chunks, setDT)
 chunksdt <- map(chunksdt, ~.x %>% mutate(datetime = as.POSIXct(datetime)))
 
@@ -178,6 +197,19 @@ conveyor_stats_summ <- map(conveyor_stats, ~map_dfr(.x, ~{
                    mnstr = mean(strength, na.rm = T))
 }))
 
+conveyor_stats_2 <- map(conveyors_2, ~map(.x, ~{
+  get_stats(data = .x, edgelist = get_edgelist(.x, 
+                                               idCol = "indiv",
+                                               dateCol = "newdatetime"),
+            idCol = "indiv")},
+  .progress = T))
+save(conveyor_stats_2, file = "data/socLevels/conveyor_stats_2.Rda")
+
+conveyor_stats_summ_2 <- map(conveyor_stats_2, ~map_dfr(.x, ~{
+  .x %>% summarize(mndeg = mean(degree, na.rm = T),
+                   mnstr = mean(strength, na.rm = T))
+}))
+
 ## Random -------------------------------------------------------------
 random_stats <- map(randoms, ~map(.x, ~{
   get_stats(data = .x, edgelist = get_edgelist(.x, 
@@ -196,7 +228,15 @@ random_stats_summ <- map(random_stats, ~map_dfr(.x, ~{
 chunks_tojoin <- map(chunks, ~select(.x, simulation, socLevel) %>% slice(1))
 conveyor_stats_summ <- map2(conveyor_stats_summ, chunks_tojoin, ~cbind(.x, .y) %>% 
                               mutate(iteration = 1:n())) %>%
-  purrr::list_rbind()
+  purrr::list_rbind() %>%
+  mutate(shift = 25)
+
+conveyor_stats_summ_2 <- map2(conveyor_stats_summ_2, chunks_tojoin, 
+                              ~cbind(.x, .y) %>% 
+                              mutate(iteration = 1:n())) %>%
+  purrr::list_rbind() %>%
+  mutate(shift = 1)
+
 random_stats_summ <- map2(random_stats_summ, chunks_tojoin, ~cbind(.x, .y) %>% 
                             mutate(iteration = 1:n())) %>%
   purrr::list_rbind()
@@ -207,11 +247,13 @@ obs_stats_summ <- map2(obs_stats_summ, chunks_tojoin, ~cbind(.x, .y)) %>%
          "mnstr_obs" = "mnstr")
 
 conveyor_stats_summ <- left_join(conveyor_stats_summ, obs_stats_summ, by = c("simulation", "socLevel"))
+conveyor_stats_summ_2 <- left_join(conveyor_stats_summ_2, obs_stats_summ, by = c("simulation", "socLevel"))
+cs_summ <- bind_rows(conveyor_stats_summ, conveyor_stats_summ_2)
 random_stats_summ <- left_join(random_stats_summ, obs_stats_summ, by = c("simulation", "socLevel"))
 
 # Calculate true positives ------------------------------------------------
-tp_conveyor <- conveyor_stats_summ %>%
-  group_by(simulation, socLevel) %>%
+tp_conveyor <- cs_summ %>%
+  group_by(simulation, socLevel, shift) %>%
   summarize(less_deg = sum(mndeg <= mndeg_obs),
             less_str = sum(mnstr <= mnstr_obs),
             quant_deg = less_deg/n(),
@@ -240,17 +282,26 @@ tp_random <- random_stats_summ %>%
   mutate(likelihood_detect_social = 1-pval) %>%
   mutate(type = "Path shuffling")
 
-tp <- bind_rows(tp_conveyor, tp_random)
+tp <- bind_rows(tp_conveyor, tp_random) %>%
+  mutate(colFactor = paste(type, shift)) %>%
+  mutate(colFactor = case_when(colFactor == "Path shuffling NA" ~ "Path shuffling",
+                               colFactor == "Wrap-around 1" ~ "Wrap-around (2 days)",
+                               colFactor == "Wrap-around 25" ~ "Wrap-around (50 days)"),
+         colFactor = factor(colFactor, levels = c("Path shuffling", "Wrap-around (2 days)", "Wrap-around (50 days)"))) %>%
+  mutate(socLevel = as.numeric(socLevel))
 
+# Make plots --------------------------------------------------------------
+colorVec <- c(permutationColors[2], continuousColors) # in an order that corresponds to the levels listed above.
 tpplot <- tp %>%
+  filter(socLevel > 0) %>%
   mutate(measure = case_when(measure == "p2_deg" ~ "Degree",
                              measure == "p2_str" ~ "Strength")) %>%
-  ggplot(aes(x = socLevel, y = likelihood_detect_social, col = simulation, 
-             group = interaction(simulation, type)))+
-  geom_path(aes(group = interaction(simulation, type), linetype = type), 
-            linewidth = 2)+
-  facet_wrap(~measure)+
-  scale_color_brewer(name = "Simulation", palette = "Dark2")+
+  ggplot(aes(x = socLevel, y = likelihood_detect_social, col = colFactor, 
+             group = interaction(simulation, type, shift)))+
+  geom_path(linewidth = 1)+
+  geom_point(pch = 1)+
+  facet_grid(cols = vars(measure), rows = vars(simulation))+
+  scale_color_manual(values = colorVec)+
   theme_classic()+
   ylab("Likelihood to detect social effect")+
   xlab("Social weight")+
@@ -258,17 +309,21 @@ tpplot <- tp %>%
 ggsave(tpplot, file = "fig/socLevels/tpplot.png", width = 7, height = 5)
 
 fnplot <- tp %>%
+  filter(socLevel > 0) %>%
   mutate(measure = case_when(measure == "p2_deg" ~ "Degree",
                              measure == "p2_str" ~ "Strength")) %>%
-  ggplot(aes(x = socLevel, y = pval, col = simulation, 
-             group = interaction(simulation, type)))+
-  geom_path(aes(group = interaction(simulation, type), linetype = type), 
-            linewidth = 2)+
-  facet_wrap(~measure)+
-  scale_color_brewer(name = "Simulation", palette = "Dark2")+
+  ggplot(aes(x = socLevel, y = pval, col = colFactor, 
+             group = interaction(simulation, type, shift)))+
+  geom_path(linewidth = 1, aes(linetype = colFactor))+
+  geom_point(pch = 1)+
+  facet_grid(cols = vars(measure), rows = vars(simulation))+
+  scale_color_manual(name = "Randomization", values = colorVec)+
+  scale_linetype_manual(values = c(5, 1, 1))+
   theme_classic()+
-  ylab("Likelihood to not detect social effect")+
+  ylab("Likelihood to miss social effect")+
   xlab("Social weight")+
-  theme(text = element_text(size = 14))
+  theme(text = element_text(size = 14),
+        strip.text.y = element_blank())+
+  guides(linetype = "none")
 ggsave(fnplot, file = "fig/socLevels/fnplot.png", width = 7, height = 5)
 
