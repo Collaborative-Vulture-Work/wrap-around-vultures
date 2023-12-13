@@ -415,6 +415,14 @@ for(i in 1:4){
 }
 colnames(staticAttractors) <- c("x", "y")
 
+# SIM 1 -------------------------------------------------------------------
+r <- 0.01 # home range centers effectively not moving
+baseAgentStep <- 7
+HRStpSize <- baseAgentStep*r
+HRStpStd <- HRStpSize*0.75 # leaving this here for now--could go back and change later if we want. 
+hrk <- 0.01
+hre <- 0.7
+
 sim1_ns <- simulateAgents(N = 5,
                        Days = 10,
                        DayLength = 50,
@@ -434,13 +442,14 @@ sim1_ns <- simulateAgents(N = 5,
                        HRKappa_ind = hrk,
                        spatialAttractors = staticAttractors,
                        spatialWeight = 1,
-                       spatialPercepRange = Scl/5)
+                       spatialPercepRange = Scl/5,
+                       roostThreshhold = 0.7)
 
-hr <- sim1_ns$HRCent %>% as.data.frame() %>% mutate(indiv = 1:nrow(.)) %>% rename("X" = V1, "Y" = V2)
+# hr <- sim1_ns$HRCent %>% as.data.frame() %>% mutate(indiv = 1:nrow(.)) %>% rename("X" = X, "Y" = Y)
 
 ggplot() + 
   geom_point(data = sim1_ns$XY, aes(x = X, y = Y, col = day))+
-  geom_point(data = hr, aes(x = X, y = Y), pch = 19, size = 5)+
+  geom_point(data = sim1_ns$HRCent, aes(x = X, y = Y), pch = 19, size = 5)+
   geom_point(data = staticAttractors, aes(x = x, y = y)) + 
   facet_wrap(~indiv, scales = "free")+theme_minimal()+
   theme(legend.position = "none", axis.text = element_text(size = 18))+
@@ -463,32 +472,41 @@ p_s1_ns <- sim1_ns$XY %>%
   theme(legend.position = "none")+
   ggtitle("Scenario 1, non-sociable")
 
+# SIM 3 -------------------------------------------------------------------
+r <- 10 # home range steps are 10x the size of agent steps
+baseAgentStep <- 7
+HRStpSize <- baseAgentStep*r
+HRStpStd <- HRStpSize*0.75 # leaving this here for now--could go back and change later if we want. 
+hrk <- 20 # k = 20, highly directional
+hre <- 0.7
+
 sim3_ns <- simulateAgents(N = 5,
-                          Days = 10,
+                          Days = 20,
                           DayLength = 50,
                           Soc_Percep_Rng = 1000,
                           Scl = 1000,
-                          seed = 9252023,
+                          seed = NULL,
                           EtaCRW = 0.7,
                           StpSize_ind = baseAgentStep,
                           StpStd_ind = 5,
                           Kappa_ind = 4,
                           quiet = T,
                           sim_3 = T,
-                          socialWeight = 0.75,
+                          socialWeight = 0,
                           HREtaCRW = 0.7,
                           HRStpSize = HRStpSize,
                           HRStpStd = HRStpStd,
                           HRKappa_ind = hrk,
                           spatialAttractors = staticAttractors,
                           spatialWeight = 0.25,
-                          spatialPercepRange = Scl/5)
+                          spatialPercepRange = Scl/5,
+                          roostThreshhold = 0.7)
 
 ggplot() +
   geom_point(data = sim3_ns$XY, aes(x = X, y = Y, col = day))+
   geom_point(data = sim3_ns$HRCent, aes(x = X, y = Y, col = day),
              pch = 19, size = 5)+
-  geom_point(data = staticAttractors, aes(x = x, y = y)) + 
+  geom_point(data = staticAttractors, aes(x = x, y = y)) +
   facet_wrap(~indiv, scales = "free")+theme_minimal()+
   theme(legend.position = "none", axis.text = element_text(size = 18))+
   scale_color_viridis()+
@@ -509,3 +527,4 @@ p_s3_ns <- sim3_ns$XY %>%
   theme_minimal()+
   theme(legend.position = "none")+
   ggtitle("Scenario 3, non-sociable")
+p_s3_ns

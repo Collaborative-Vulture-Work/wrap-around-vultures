@@ -51,7 +51,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
                            asocial = F,
                            spatialAttractors = NULL,
                            spatialPercepRange = 200,
-                           spatialWeight = 0.5
+                           spatialWeight = 0.5,
+                           roostThreshhold = 0.9
 ){
   
   # 1. Set the seed, if one is provided ----------------------------------------
@@ -77,8 +78,12 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
     # Place agents in their initial positions
     XYind[[k]] <- matrix(rep(NA, 2*N_timesteps), ncol = 2) # This matrix will store the location of each individual
     # Set random X and Y locations and log the HR center
-    XYind[[k]][1, ] <-  c(runif(n=1, min=-Scl/3, max=Scl/3), 
-                          runif(n=1, min=-Scl/3, max=Scl/3 )) 
+    if(class(spatialAttractors) == "data.frame"){
+      XYind[[k]][1, ] <- as.numeric(spatialAttractors[ceiling(runif(n=1, max=nrow(spatialAttractors))), ])
+    } else {
+      XYind[[k]][1, ] <-  c(runif(n=1, min=-Scl/3, max=Scl/3), 
+                            runif(n=1, min=-Scl/3, max=Scl/3 )) 
+    }
     HRCent[k, 1:2] <- XYind[[k]][1, ]
     
   } # End loop on individuals 
@@ -144,15 +149,6 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       }
       Dist[Dist == 0] <- NA # Remove distance to self
       
-      
-      if(class(spatialAttractors) == "data.frame"){
-        distToAttractors <- rep(NA, nrow(spatialAttractors))
-        for(spatialAttractor in 1:nrow(spatialAttractors)){
-          distToAttractors[spatialAttractor] <- stats::dist(rbind(spatialAttractors[spatialAttractor, ],
-                                                c(XYind[[Curr_indv]][Curr_timestep,])))
-        }
-      }
-      
       # Calculating the direction to the initial location (bias point )+ now with drift for the current step
       # Set individual bias points in different ways depending on method
       if(HRChangeRadius > 0 || sim_3 > 0){
@@ -181,16 +177,14 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
           BiasPoint <- meanpoint
         }
       }
-      
-      if(class(spatialAttractors) == "data.frame"){
-        if(min(distToAttractors, na.rm = T) < spatialPercepRange){
-          closestAttractor <- as.numeric(spatialAttractors[which.min(distToAttractors), ])
-          meanpoint <- (spatialWeight*closestAttractor + (1-spatialWeight) * BiasPoint)
-          BiasPoint <- meanpoint
+      if(class(spatialAttractors) == "data.frame" && Curr_timestep %% DayLength >= DayLength * roostThreshhold){
+        distToAttractors <- rep(NA, nrow(spatialAttractors))
+        for(spatialAttractor in 1:nrow(spatialAttractors)){
+          distToAttractors[spatialAttractor] <- stats::dist(rbind(spatialAttractors[spatialAttractor, ],
+                                                                  c(XYind[[Curr_indv]][Curr_timestep,])))
         }
+        BiasPoint <- as.numeric(spatialAttractors[which.min(distToAttractors), ])
       }
-      
-      
       # Set direction to the chosen bias point
       coo <- BiasPoint - XYind[[Curr_indv]][Curr_timestep, ] 
       # Set direction:
@@ -202,8 +196,12 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       
       # Bias to initial location + CRW to find the von mises center for the next step
       mu.av <- Arg(EtaCRW * exp(Phi_ind[Curr_indv] * (0+1i)) + (1 - EtaCRW) * exp(mu * (0+1i)))
-      # Choose current step direction from von Mises centered around the direction selected above 
-      Phi_ind[Curr_indv] <- CircStats::rvm(n=1, mean = mu.av, k = Kappa_ind)
+      
+      if(Curr_timestep %% DayLength >= DayLength * roostThreshhold){
+        Phi_ind[Curr_indv] <- mu
+      } else
+        # Choose current step direction from von Mises centered around the direction selected above 
+        Phi_ind[Curr_indv] <- CircStats::rvm(n=1, mean = mu.av, k = Kappa_ind)
       
       # Perform the step
       # Selection of step size for this indiv in this state from the specific gamma          
