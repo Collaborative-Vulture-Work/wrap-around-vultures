@@ -67,7 +67,7 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
   HRCent <- matrix(data = NA, nrow = N, ncol = 3) # Empty matrix that will store home range centers
   HRCent[,3] <- rep(c(1,2), length.out = nrow(HRCent)) # Assign sex 
   HRcenterDist <- rep(0, N/2) # Initial distance between pairs of agents
-  
+
   # 4. Set initial conditions for individuals ----------------------------------
   # Loop on individuals: set initial conditions
   for (k in 1:N) {
@@ -152,8 +152,8 @@ simulateAgents <- function(N = 6, # Number of individuals in the population
       # If another individual is within social perception range...
       if(min(Dist, na.rm = T) < Soc_Percep_Rng){
         if(socialWeight < 0 | socialWeight >1){stop("socialWeight must be a number between 0 and 1.")}
-        otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
-        ownHRCent <- HRCentPerDay[[dayCount]][Curr_indv, 1:2]
+          otherIndivLoc <- XYind[[which.min(Dist)]][Curr_timestep,] # get the other individual's location
+          ownHRCent <- HRCentPerDay[[dayCount]][Curr_indv, 1:2]
         if(!asocial){
           # Take the mean between the home range center and the closest other individual's location, and bias towards that mean
           meanpoint <- (socialWeight*otherIndivLoc + (1-socialWeight)*ownHRCent)
@@ -255,35 +255,11 @@ fix_times <- function(simulation_data, sampling_interval = 10){
 
 # 3. get_edgelist ---------------------------------------------------------
 # gets network graph
-get_edgelist <- function(data, idCol, dateCol, consecThreshold = NULL){
+get_edgelist <- function(data, idCol, dateCol){
   if(is.data.frame(data))
     data <- data.table::setDT(data)
   timegroup_data <- spatsoc::group_times(data, datetime = dateCol, threshold = "10 minutes") # could be 4 minutes; see Window variable in matlab code
-  el <- spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('X','Y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE) # 14 units is twice mean step length of indivs
-  
-  if(!is.null(consecThreshold)){
-    # Remove pairs that don't interact for enough consecutive time steps
-    uniquePairs <- el %>%
-      group_by(ID1, ID2, timegroup) %>%
-      arrange(timegroup, .by_group = T) %>%
-      ungroup() %>%
-      group_by(ID1, ID2) %>%
-      mutate(grp = cumsum(c(1, diff(timegroup) != 1))) %>% # this is a weird hack borrowed from vultureUtils. Apparently when you append 1 to a logical vector, it converts the logical to numeric 1/0. And then we can take advantage of that to add the 1s and 0s to get a cumsum.
-      ungroup()
-    
-    tokeep <- uniquePairs %>%
-      group_by(ID1, ID2, grp) %>%
-      filter(n() >= consecThreshold) %>%
-      ungroup() %>%
-      select(-grp)
-    
-    consec <- tokeep %>%
-      left_join(el, by = c("ID1", "ID2", "timegroup"))
-    return(consec)
-  }
-  else{
-    return(el)
-  }
+  spatsoc::edge_dist(timegroup_data, threshold = 14, id = idCol, coords = c('X','Y'), timegroup = "timegroup", returnDist = FALSE, fillNA = FALSE) # 14 units is twice mean step length of indivs
 }
 
 # 4. rotate_data_table ------------------------------------------------------------
