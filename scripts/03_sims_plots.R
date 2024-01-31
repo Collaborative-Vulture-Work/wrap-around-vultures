@@ -11,6 +11,7 @@ days <- 50
 
 stats_perm <- stats_perm %>% mutate(type = fct_recode(factor(type),
                          "Shuffled" = "random",
+                         "Shuffled_tw" = "random_tw",
                          "Wrap-around" = "conveyor"))
 
 # 5. Make plot ---------------------------------------------------------------
@@ -31,6 +32,7 @@ for(i in 1:length(uniquesims)){
   datobs <- datobs %>%
     mutate(ID1 = factor(ID1, levels = ord))
   datperm <- stats_perm %>%
+    filter(type != "Shuffled_tw") %>%
     filter(uniquesim == usim,
            shift %in% c(whichshift, NA)) %>% 
     mutate(ID1 = factor(ID1, levels = ord))
@@ -108,6 +110,7 @@ for(i in 1:length(uniquesims)){
   datobs <- datobs %>%
     mutate(ID1 = factor(ID1, levels = ord))
   datperm <- stats_perm %>%
+    filter(type != "Shuffled_tw") %>%
     filter(uniquesim == usim,
            shift %in% c(whichshift, NA)) %>% 
     mutate(ID1 = factor(ID1, levels = ord))
@@ -217,6 +220,33 @@ shifthistrs_str <- summ %>%
 shifthistrs_str
 ggsave(shifthistrs_str, filename = "fig/sims_plots/shifhistrs_str.png", width = 6, height = 8)
 
+shifthistrs_str_tw <- summ %>%
+  filter(type == "Wrap-around") %>%
+  ggplot(aes(x = mnstr, group = factor(shiftprop)))+
+  geom_density(aes(col = shiftprop), linewidth = 1.2)+
+  scale_colour_gradientn(colors = continuousColors)+
+  facet_wrap(~letters, ncol = 2, nrow = 3, scales = "free")+
+  theme_classic()+
+  theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
+  geom_density(data = summ %>% filter(type == "Shuffled"), col = permutationColors[2], linewidth = 1.2)+
+  geom_density(data = summ %>% filter(type == "Shuffled_tw"),
+               col = "red", linewidth = 1.2)+
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text.x = element_text(hjust = 0, size = 12, face = "bold"),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 14),
+        panel.spacing.x = unit(1, "lines")
+  )+
+  geom_vline(data = obs_summ, aes(xintercept = mnstr), linetype = 2)+
+  ylab("")+
+  xlab("Mean strength")+
+  labs(color = "Shift range proportion")
+shifthistrs_str_tw
+ggsave(shifthistrs_str_tw, filename = "fig/sims_plots/shifhistrs_str_tw.png", width = 6, height = 8)
+
 shifthistrs_deg <- summ %>%
   filter(type == "Wrap-around") %>%
   ggplot(aes(x = mndeg, group = factor(shiftprop)))+
@@ -239,6 +269,30 @@ shifthistrs_deg <- summ %>%
   labs(color = "Shift range proportion")
 shifthistrs_deg
 ggsave(shifthistrs_deg, filename = "fig/sims_plots/shifhistrs_deg.png", width = 6, height = 8)
+
+shifthistrs_deg_tw <- summ %>%
+  filter(type == "Wrap-around") %>%
+  ggplot(aes(x = mndeg, group = factor(shiftprop)))+
+  geom_density(aes(col = shiftprop), linewidth = 1.2)+
+  scale_colour_gradientn(colors = continuousColors)+
+  facet_wrap(~letters, ncol = 2, nrow = 3, scales = "free")+
+  theme_classic()+
+  theme(legend.title = element_text("Shiftmax \n(prop. of total dur)"))+
+  geom_density(data = summ %>% filter(type == "Shuffled"), col = permutationColors[2], linewidth = 1.2)+
+  geom_density(data = summ %>% filter(type == "Shuffled_tw"), col = "red", linewidth = 1.2)+
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text.x = element_text(hjust = 0, size = 12, face = "bold"),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 14)
+  )+
+  geom_vline(data = obs_summ, aes(xintercept = mndeg), linetype = 2)+
+  ylab("Frequency")+xlab("Mean degree")+
+  labs(color = "Shift range proportion")
+shifthistrs_deg_tw
+ggsave(shifthistrs_deg_tw, filename = "fig/sims_plots/shifhistrs_deg_tw.png", width = 6, height = 8)
 
 # Make these into a single graph: shiftprop vs. mean mean deg/mean mean str
 summsumm <- summ %>%

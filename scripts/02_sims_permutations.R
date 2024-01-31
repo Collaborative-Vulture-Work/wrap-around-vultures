@@ -82,7 +82,7 @@ load("data/simulations/sims_random.Rda")
 
 #####################
 # create groups every 10 days
-sims_xy_dt <- map(sims_xy_dt, ~.x %>% mutate(d = as.numeric(factor(.x$date)),
+sims_xy_dt <- map(sims_xy_dt, ~.x %>% mutate(d = as.numeric(factor(date)),
                                              group = cut(d, breaks = c(1, 10, 20, 30, 40, 50), 
                                                          include.lowest = T, right = F)))
 sims_random_tw <- map(sims_xy_dt, ~{
@@ -154,7 +154,7 @@ load("data/simulations/random_stats.Rda")
 
 random_stats_tw <- vector(mode = "list", length = length(sims_random_tw))
 for(i in 1:length(sims_random_tw)){
-  edges <- map(sims_random_tw[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"))
+  edges <- map(sims_random_tw[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"), .progress = T)
   stats <- map2(.x = sims_random_tw[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x, idCol = "indiv")) %>%
     purrr::list_rbind(names_to = "iteration")
   random_stats_tw[[i]] <- stats
@@ -178,7 +178,7 @@ load("data/simulations/random_stats_tw_df.Rda")
 # Combine all the stats
 stats_perm <- sms_conveyor_stats_df %>% mutate(type = "conveyor") %>%
   bind_rows(random_stats_df %>% mutate(type = "random")) %>%
-  bind_rows(random_stats_df %>% mutate(type = "random_tw")) %>%
+  bind_rows(random_stats_tw_df %>% mutate(type = "random_tw")) %>%
   mutate(uniquesim = paste(sim, sns, sep = "_"))
 save(stats_perm, file = "data/simulations/stats_perm.Rda")
 load("data/simulations/stats_perm.Rda")
