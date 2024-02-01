@@ -6,8 +6,8 @@ library(vultureUtils)
 # load("data/seasons.Rda") # load the cleaned seasons data taken from the MvmtSoc project
 # seasonNames <- map_chr(seasons, ~as.character(.x$seasonUnique[1]))
 # season_data <- seasons[[which(seasonNames == "2022_summer")]]
-# save(season_data, file = "data/vulture_permutations/season_data.Rda")
-load("data/vulture_permutations/season_data.Rda")
+# write_csv(season_data, file = "data/vulture_permutations/season_data.csv")
+season_data <- read_csv("data/vulture_permutations/season_data.csv")
 roostPolygons <- read_sf("./data/roosts50_kde95_cutOffRegion.kml")
 
 # Make date and time columns that can be used for rotations
