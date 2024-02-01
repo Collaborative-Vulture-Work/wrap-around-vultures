@@ -2,9 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-data/simulations/
+data/
 .DS_Store
-data/vulture_permutations/
-data/seasons.Rda
-data/socLevels/
-data/consecThreshold/
