@@ -137,10 +137,10 @@ sms_conveyor_stats_df <- stats_shifts %>%
          sim = simulations[as.character(simulation)],
          sns = soc_nonsoc[as.character(simulation)]) %>%
   select(-simulation)
-
+  
 save(sms_conveyor_stats_df, file = "data/simulations/sms_conveyor_stats_df.Rda")
 load("data/simulations/sms_conveyor_stats_df.Rda")
-
+                  
 # 3. random permutations
 random_stats <- vector(mode = "list", length = length(sims_random))
 for(i in 1:length(sims_random)){
