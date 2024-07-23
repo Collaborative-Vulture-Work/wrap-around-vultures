@@ -3,26 +3,21 @@ library(tidyverse)
 library(sf)
 library(vultureUtils)
 
-# load("data/seasons.Rda") # load the cleaned seasons data taken from the MvmtSoc project
-# seasonNames <- map_chr(seasons, ~as.character(.x$seasonUnique[1]))
-# season_data <- seasons[[which(seasonNames == "2022_summer")]]
-# save(season_data, file = "data/vulture_permutations/season_data.Rda")
-load("data/vulture_permutations/season_data.Rda")
-roostPolygons <- read_sf("./data/roosts50_kde95_cutOffRegion.kml")
-
+season_data_shifted <- read_csv("data/vulture_permutations/season_data_shifted.csv")
+roost_polygons_shifted <- read_sf("./data/roosts50_kde95_shifted.kml")
 # Make date and time columns that can be used for rotations
-season_data$date <- lubridate::date(season_data$timestamp)
-season_data$time <- stringr::str_extract(season_data$timestamp, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
-season_data$time <- replace_na(season_data$time, "00:00:00")
-season_data <- st_drop_geometry(season_data)
+season_data_shifted$date <- lubridate::date(season_data_shifted$timestamp)
+season_data_shifted$time <- stringr::str_extract(season_data_shifted$timestamp, pattern = "[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}")
+season_data_shifted$time <- replace_na(season_data_shifted$time, "00:00:00")
+season_data_shifted <- st_drop_geometry(season_data_shifted)
 
 # Calculate movement metrics ----------------------------------------------
 # How many days were individuals tracked?
-season_data %>% group_by(Nili_id) %>% sf::st_drop_geometry() %>% summarize(n = length(unique(dateOnly))) %>% arrange(desc(n)) %>% summarize(mn = mean(n), min = min(n), max = max(n), sd = sd(n))
+season_data_shifted %>% group_by(Nili_id) %>% sf::st_drop_geometry() %>% summarize(n = length(unique(dateOnly))) %>% arrange(desc(n)) %>% summarize(mn = mean(n), min = min(n), max = max(n), sd = sd(n))
 
 # Daily distance traveled and max displacement
-head(season_data)
-# flightmetrics_summer2022 <- calc_metrics(season_data)
+head(season_data_shifted)
+# flightmetrics_summer2022 <- calc_metrics(season_data_shifted)
 # save(flightmetrics_summer2022, file = "data/vulture_permutations/flightmetrics_summer2022.Rda")
 load("data/vulture_permutations/flightmetrics_summer2022.Rda")
 
@@ -55,13 +50,13 @@ flightmetrics_summer2022 %>%
   mutate(value = value/1000)
 
 # Make a plot of the vulture trajectories
-vultures <- unique(season_data$Nili_id)
+vultures <- unique(season_data_shifted$Nili_id)
 set.seed(3)
 random_vultures <- sample(vultures, 5)
-mindate <- min(season_data$dateOnly)
+mindate <- min(season_data_shifted$dateOnly)
 maxdate <- mindate + 50
 
-forplot <- season_data %>%
+forplot <- season_data_shifted %>%
   sf::st_as_sf(coords = c("location_long", "location_lat"), crs = "WGS84", remove = F) %>%
   filter(dateOnly >= mindate, dateOnly <= maxdate) %>%
   dplyr::mutate(toshow = dplyr::case_when(Nili_id %in% random_vultures ~ T,
@@ -84,7 +79,7 @@ vultures
 ggsave(vultures, filename = "fig/vulture_permutations_plots/vultures.png", width = 7, height = 7)
 
 # Look at the vultures' home ranges and space use ---------------------------------------
-szn <- season_data %>%
+szn <- season_data_shifted %>%
   sf::st_as_sf(coords = c("location_long", "location_lat"), crs = "WGS84") %>%
   sf::st_transform(32636)
 
@@ -135,7 +130,7 @@ centroids %>%
 # Do some permutations ----------------------------------------------------
 
 n <- 100 # number of permutations
-length(unique(season_data$dateOnly)) #124 days
+length(unique(season_data_shifted$dateOnly)) #124 days
 # Let's do roughly 20% of that... so 24ish days. so sm should be 12.
 sm <- 12 # can shift 12 days in either direction, 24 day range total
 sm2 <- 1 # running it again with just 1 day allowed in either direction
@@ -144,13 +139,13 @@ sm2 <- 1 # running it again with just 1 day allowed in either direction
 realizations_conveyor_v <- vector(mode = "list", length = n)
 for(i in 1:n){
   cat(".")
-  realizations_conveyor_v[[i]] <- rotate_data_table(dataset = season_data, shiftMax = sm, idCol = "trackId", dateCol = "date", timeCol = "time")
+  realizations_conveyor_v[[i]] <- rotate_data_table(dataset = season_data_shifted, shiftMax = sm, idCol = "trackId", dateCol = "date", timeCol = "time")
 } 
 
 realizations_conveyor_v2 <- vector(mode = "list", length = n) # again with a smaller shift range
 for(i in 1:n){
   cat(".")
-  realizations_conveyor_v2[[i]] <- rotate_data_table(dataset = season_data, shiftMax = sm2, idCol = "trackId", dateCol = "date", timeCol = "time")
+  realizations_conveyor_v2[[i]] <- rotate_data_table(dataset = season_data_shifted, shiftMax = sm2, idCol = "trackId", dateCol = "date", timeCol = "time")
 } 
 
 realizations_conveyor_v <- realizations_conveyor_v %>%
@@ -169,7 +164,7 @@ save(realizations_conveyor_v2, file = "data/vulture_permutations/realizations_co
 # load("data/vulture_permutations/realizations_conveyor_v2.Rda")
 
 # Run the random permutations
-# random_data <- season_data
+# random_data <- season_data_shifted
 # data.table::setDT(random_data)
 # toJoin <- random_data %>%
 #   select(ground_speed, location_lat, location_long, date, time)
@@ -195,21 +190,21 @@ rm(realizations_random_v)
 gc()
 
 fe_conveyor <- map(conveyor_v_sf, ~{
-  getFlightEdges(dataset = .x, roostPolygons = roostPolygons, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
+  getFlightEdges(dataset = .x, roostPolygons = roost_polygons_shifted, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
 })
 save(fe_conveyor, file = "data/vulture_permutations/fe_conveyor.Rda")
 rm(conveyor_v_sf)
 #load("data/vulture_permutations/fe_conveyor.Rda")
 
 fe_conveyor_2 <- map(conveyor_v2_sf, ~{
-  getFlightEdges(dataset = .x, roostPolygons = roostPolygons, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
+  getFlightEdges(dataset = .x, roostPolygons = roost_polygons_shifted, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
 })
 save(fe_conveyor_2, file = "data/vulture_permutations/fe_conveyor_2.Rda")
 rm(conveyor_v2_sf)
 #load("data/vulture_permutations/fe_conveyor_2.Rda")
 
 fe_random <- map(random_v_sf, ~{
-  getFlightEdges(dataset = .x, roostPolygons = roostPolygons, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
+  getFlightEdges(dataset = .x, roostPolygons = roost_polygons_shifted, roostBuffer = 50, consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
 })
 save(fe_random, file = "data/vulture_permutations/fe_random.Rda")
 rm(random_v_sf)
@@ -272,9 +267,9 @@ load("data/vulture_permutations/vulture_stats_perms.Rda")
 load("data/vulture_permutations/vulture_stats_perms_2.Rda")
 
 # Get observed stats
-season_data <- season_data %>%
+season_data_shifted <- season_data_shifted %>%
   sf::st_as_sf(coords = c("location_long", "location_lat"), remove = F, crs = "WGS84")
-fe <- getFlightEdges(dataset = season_data, roostPolygons = roostPolygons, roostBuffer = 50,
+fe <- getFlightEdges(dataset = season_data_shifted, roostPolygons = roost_polygons_shifted, roostBuffer = 50,
                     consecThreshold = 2, distThreshold = 1000, speedThreshUpper = NULL, speedThreshLower = 5, timeThreshold = "10 minutes", idCol = "trackId", quiet = T, includeAllVertices = F, daytimeOnly = T, return = "sri", getLocs = F)
 
 fe_obs_df <- fe %>%
