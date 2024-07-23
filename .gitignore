@@ -7,3 +7,4 @@ data/simulations/
 data/vulture_permutations/
 data/seasons.Rda
 data/socLevels/
+scripts/shiftCoords.R
