@@ -80,6 +80,24 @@ sims_random <- map(sims_xy_dt, ~{
 save(sims_random, file = "data/simulations/sims_random.Rda")
 load("data/simulations/sims_random.Rda")
 
+#####################
+# create groups every 10 days
+sims_xy_dt <- map(sims_xy_dt, ~.x %>% mutate(d = as.numeric(factor(date)),
+                                             group = cut(d, breaks = c(1, 10, 20, 30, 40, 50), 
+                                                         include.lowest = T, right = F)))
+sims_random_tw <- map(sims_xy_dt, ~{
+  r <- spatsoc::randomizations(DT = .x, type = "trajectory", id = "indiv",
+                               datetime = "datetime", coords = c("X", "Y"),
+                               iterations = n, splitBy = "group") %>%
+    filter(iteration != 0) %>% # remove the original data (iteration 0)
+    group_by(iteration) %>%
+    group_split(.keep = TRUE)
+  cat("*")
+  return(r)
+}, .progress = T)
+save(sims_random_tw, file = "data/simulations/sims_random_tw.Rda")
+load("data/simulations/sims_random_tw.Rda")
+
 # STATS -------------------------------------------------------------------
 # 1. observed simulations
 obs_stats <- map(sims_xy,
@@ -119,10 +137,10 @@ sms_conveyor_stats_df <- stats_shifts %>%
          sim = simulations[as.character(simulation)],
          sns = soc_nonsoc[as.character(simulation)]) %>%
   select(-simulation)
-
+  
 save(sms_conveyor_stats_df, file = "data/simulations/sms_conveyor_stats_df.Rda")
 load("data/simulations/sms_conveyor_stats_df.Rda")
-
+                  
 # 3. random permutations
 random_stats <- vector(mode = "list", length = length(sims_random))
 for(i in 1:length(sims_random)){
@@ -134,6 +152,16 @@ for(i in 1:length(sims_random)){
 save(random_stats, file = "data/simulations/random_stats.Rda")
 load("data/simulations/random_stats.Rda")
 
+random_stats_tw <- vector(mode = "list", length = length(sims_random_tw))
+for(i in 1:length(sims_random_tw)){
+  edges <- map(sims_random_tw[[i]], ~get_edgelist(data = .x, idCol = "indiv", dateCol = "randomdatetime"), .progress = T)
+  stats <- map2(.x = sims_random_tw[[i]], .y = edges, ~get_stats(edgelist = .y, data = .x, idCol = "indiv")) %>%
+    purrr::list_rbind(names_to = "iteration")
+  random_stats_tw[[i]] <- stats
+}
+save(random_stats_tw, file = "data/simulations/random_stats_tw.Rda")
+load("data/simulations/random_stats_tw.Rda")
+
 # Label the stats
 random_stats <- map2(random_stats, simulations, ~.x %>% mutate(sim = .y))
 random_stats <- map2(random_stats, soc_nonsoc, ~.x %>% mutate(sns = .y))
@@ -141,9 +169,16 @@ random_stats_df <- random_stats %>% purrr::list_rbind()
 save(random_stats_df, file = "data/simulations/random_stats_df.Rda")
 load("data/simulations/random_stats_df.Rda")
 
+random_stats_tw <- map2(random_stats_tw, simulations, ~.x %>% mutate(sim = .y))
+random_stats_tw <- map2(random_stats_tw, soc_nonsoc, ~.x %>% mutate(sns = .y))
+random_stats_tw_df <- random_stats_tw %>% purrr::list_rbind()
+save(random_stats_tw_df, file = "data/simulations/random_stats_tw_df.Rda")
+load("data/simulations/random_stats_tw_df.Rda")
+
 # Combine all the stats
 stats_perm <- sms_conveyor_stats_df %>% mutate(type = "conveyor") %>%
   bind_rows(random_stats_df %>% mutate(type = "random")) %>%
+  bind_rows(random_stats_tw_df %>% mutate(type = "random_tw")) %>%
   mutate(uniquesim = paste(sim, sns, sep = "_"))
 save(stats_perm, file = "data/simulations/stats_perm.Rda")
 load("data/simulations/stats_perm.Rda")
