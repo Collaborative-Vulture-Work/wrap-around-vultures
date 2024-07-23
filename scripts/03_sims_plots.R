@@ -37,7 +37,8 @@ for(i in 1:length(uniquesims)){
   
   # Make the plot
   p <- datperm %>%
-    filter(!is.na(ID1)) %>% # XXX need to deal with NA values for ID1--they didn't have stats calculated for them
+    filter(!is.na(ID1),
+           type %in% c("Wrap-around", "Shuffled")) %>% # XXX need to deal with NA values for ID1--they didn't have stats calculated for them
     ggplot()+
     geom_boxplot(aes(x = ID1, y = strength, col = type, fill = type), position = position_dodge(), outlier.size = 0.5)+
     theme_classic()+
@@ -57,7 +58,8 @@ for(i in 1:length(uniquesims)){
   
   # Now make the inset
   summ <- datperm %>%
-    filter(shift %in% c(whichshift, NA)) %>%
+    filter(shift %in% c(whichshift, NA),
+           type %in% c("Wrap-around", "Shuffled")) %>%
     group_by(iteration, type) %>%
     summarize(mnstr = mean(strength)) %>%
     ungroup()
@@ -66,6 +68,7 @@ for(i in 1:length(uniquesims)){
     mean()
   
   miniplot <- summ %>%
+    filter(type %in% c("Wrap-around", "Shuffled")) %>%
     ggplot(aes(x = mnstr))+
     geom_density(aes(col = type), linewidth = 1)+
     geom_vline(xintercept = obsval, lty = 2, linewidth = 0.5)+
@@ -80,6 +83,7 @@ for(i in 1:length(uniquesims)){
     {if(i == 6)ylab("Mean strength")}+
     {if(i == 6)xlab("Frequency")}+
     scale_color_manual(name = "Randomization", values = permutationColors)
+    NULL
   insets[[i]] <- miniplot
 }
 
@@ -114,7 +118,8 @@ for(i in 1:length(uniquesims)){
   
   # Make the plot
   p <- datperm %>%
-    filter(!is.na(ID1)) %>% # XXX need to deal with NA values for ID1--they didn't have stats calculated for them
+    filter(!is.na(ID1),
+           type %in% c("Wrap-around", "Shuffled")) %>% # XXX need to deal with NA values for ID1--they didn't have stats calculated for them
     ggplot()+
     geom_boxplot(aes(x = ID1, y = degree, col = type, fill = type), position = position_dodge(), outlier.size = 0.5)+
     theme_classic()+
@@ -134,7 +139,8 @@ for(i in 1:length(uniquesims)){
   
   # Now make the inset
   summ <- datperm %>%
-    filter(shift %in% c(whichshift, NA)) %>%
+    filter(shift %in% c(whichshift, NA),
+           type %in% c("Wrap-around", "Shuffled")) %>%
     group_by(iteration, type) %>%
     summarize(mndeg = mean(degree)) %>%
     ungroup()
@@ -143,6 +149,7 @@ for(i in 1:length(uniquesims)){
     mean()
   
   miniplot <- summ %>%
+    filter(type %in% c("Wrap-around", "Shuffled")) %>%
     ggplot(aes(x = mndeg))+
     geom_density(aes(col = type), linewidth = 1)+
     geom_vline(xintercept = obsval, lty = 2, linewidth = 0.5)+
@@ -168,6 +175,7 @@ ggsave(deg_6panel, filename = "fig/sims_plots/deg_6panel.png", width = 7, height
 
 # Histograms: mean value vs. black
 summ <- stats_perm %>%
+  filter(type %in% c("Wrap-around", "Shuffled")) %>%
   group_by(uniquesim, type, iteration, shift) %>%
   summarize(mndeg = mean(degree, na.rm = T),
             mnstr = mean(strength, na.rm = T)) %>%
